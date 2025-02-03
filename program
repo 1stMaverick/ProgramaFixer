@@ -1,0 +1,369 @@
+// ==UserScript==
+// @name         ProgramFixer
+// @namespace    http://tampermonkey.net/
+// @version      1
+// @description  Фіксииииии
+// @author       You
+// @match        *://disgusting.ivano-frankivsk.ua/*
+// @grant        none
+// ==/UserScript==
+ 
+(function() {
+    'use strict';
+ 
+    // Default settings
+    const defaultConfig = {
+        videoUrl: 'https://static.vecteezy.com/system/resources/previews/002/015/063/mp4/loop-top-view-snowflake-falling-on-white-wintertime-free-video.mp4',
+        snowEnabled: true,
+        videoBackgroundEnabled: true,
+        snowflakeCount: 100,
+        snowflakeColor: 'white',
+        buttonSelector: '.form-block-buttons-submit',
+        backgroundImageUrl: 'https://www.psdgraphics.com/file/white-snow-background.jpg'
+    };
+ 
+   document.addEventListener('dblclick', function(event) {
+        if (event.target.classList.contains('vs__selected')) {
+            if (event.target.style.textDecoration === 'line-through' && event.target.style.color === 'red') {
+                event.target.style.textDecoration = 'none';
+                event.target.style.color = '';
+            } else if (event.target.style.textDecoration === 'line-through') {
+                event.target.style.color = 'red';
+            } else {
+                event.target.style.textDecoration = 'line-through';
+                event.target.style.color = '';
+            }
+        }
+    });
+    // Load saved settings from localStorage or use default settings
+    let config = JSON.parse(localStorage.getItem('userSettings')) || defaultConfig;
+ 
+    // Function to save settings to localStorage
+    function saveSettings() {
+        localStorage.setItem('userSettings', JSON.stringify(config));
+    }
+// Change background periodically for Rulikmod
+    let backgroundChangeIntervalId = null;
+    function startRulikMod() {
+        if (backgroundChangeIntervalId) clearInterval(backgroundChangeIntervalId);
+ 
+        backgroundChangeIntervalId = setInterval(() => {
+            const newBackground = `https://picsum.photos/1920/1080?random=${Date.now().png}`;
+            document.body.style.backgroundImage = `url("${newBackground}")`;
+            document.body.style.backgroundSize = 'cover';
+        }, config.backgroundChangeInterval);
+ 
+        console.log('Rulikmod activated: Background will change every 30 minutes.');
+    }
+ 
+    function stopRulikMod() {
+        if (backgroundChangeIntervalId) {
+            clearInterval(backgroundChangeIntervalId);
+            backgroundChangeIntervalId = null;
+        }
+        document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
+        document.body.style.backgroundSize = 'cover';
+        console.log('Rulikmod deactivated.');
+    }
+    // Create settings panel
+    function createSettingsPanel() {
+        const panel = document.createElement('div');
+        panel.style.position = 'fixed';
+        panel.style.top = '10px';
+        panel.style.left = '10px';
+        panel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        panel.style.color = 'white';
+        panel.style.padding = '20px';
+        panel.style.borderRadius = '8px';
+        panel.style.zIndex = '9999';
+        panel.style.fontSize = '14px';
+        panel.style.display = 'none'; // Start hidden
+ 
+        // Title (Centered Text)
+        const title = document.createElement('h2');
+        title.textContent = 'Настройки';
+        title.style.textAlign = 'center';
+        title.style.marginBottom = '20px'; // Space below the title
+        panel.appendChild(title);
+ 
+        // Video URL input
+        const videoUrlInput = document.createElement('input');
+        videoUrlInput.type = 'text';
+        videoUrlInput.value = config.videoUrl;
+        videoUrlInput.placeholder = 'Video URL';
+        videoUrlInput.style.width = '200px';
+        videoUrlInput.addEventListener('input', () => {
+            config.videoUrl = videoUrlInput.value;
+            saveSettings();
+        });
+        panel.appendChild(document.createTextNode('Video URL: '));
+        panel.appendChild(videoUrlInput);
+        panel.appendChild(document.createElement('br'));
+ 
+        // Background image URL input
+        const bgUrlInput = document.createElement('input');
+        bgUrlInput.type = 'text';
+        bgUrlInput.value = config.backgroundImageUrl;
+        bgUrlInput.placeholder = 'Background Image URL';
+        bgUrlInput.style.width = '200px';
+        bgUrlInput.addEventListener('input', () => {
+            config.backgroundImageUrl = bgUrlInput.value;
+            saveSettings();
+            document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
+        });
+        panel.appendChild(document.createTextNode('Background Image URL: '));
+        panel.appendChild(bgUrlInput);
+        panel.appendChild(document.createElement('br'));
+ 
+        // Snowfall checkbox
+        const snowCheckbox = document.createElement('input');
+        snowCheckbox.type = 'checkbox';
+        snowCheckbox.checked = config.snowEnabled;
+        snowCheckbox.addEventListener('change', () => {
+            config.snowEnabled = snowCheckbox.checked;
+            saveSettings();
+            if (config.snowEnabled) {
+                createSnowfall();
+            } else {
+                removeSnowfall();
+            }
+        });
+        panel.appendChild(document.createTextNode('Enable Snowfall: '));
+        panel.appendChild(snowCheckbox);
+        panel.appendChild(document.createElement('br'));
+ 
+        // Video background checkbox
+        const videoBgCheckbox = document.createElement('input');
+        videoBgCheckbox.type = 'checkbox';
+        videoBgCheckbox.checked = config.videoBackgroundEnabled;
+        videoBgCheckbox.addEventListener('change', () => {
+            config.videoBackgroundEnabled = videoBgCheckbox.checked;
+            saveSettings();
+            if (config.videoBackgroundEnabled) {
+                setupVideoBackground();
+            } else {
+                removeVideoBackground();
+            }
+        });
+        panel.appendChild(document.createTextNode('Enable Video Background: '));
+        panel.appendChild(videoBgCheckbox);
+        panel.appendChild(document.createElement('br'));
+ 
+        // Rulikmod checkbox
+        const rulikModCheckbox = document.createElement('input');
+        rulikModCheckbox.type = 'checkbox';
+        rulikModCheckbox.checked = config.rulikModEnabled;
+        rulikModCheckbox.addEventListener('change', () => {
+            config.rulikModEnabled = rulikModCheckbox.checked;
+            saveSettings();
+            if (config.rulikModEnabled) {
+                startRulikMod();
+            } else {
+                stopRulikMod();
+            }
+        });
+        panel.appendChild(document.createTextNode('Enable Rulikmod: '));
+        panel.appendChild(rulikModCheckbox);
+        panel.appendChild(document.createElement('br'));
+ 
+        // Toggle button for showing/hiding settings panel
+        const toggleButton = document.createElement('button');
+        toggleButton.textContent = 'Show Settings';
+        toggleButton.style.position = 'fixed';
+        toggleButton.style.top = '10px';
+        toggleButton.style.right = '10px';
+        toggleButton.style.zIndex = '9999';
+        toggleButton.style.padding = '5px 10px';
+        toggleButton.style.backgroundColor = '#333';
+        toggleButton.style.color = '#fff';
+        toggleButton.style.border = 'none';
+        toggleButton.style.borderRadius = '5px';
+        toggleButton.style.cursor = 'pointer';
+        toggleButton.addEventListener('click', () => {
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggleButton.textContent = 'Hide Settings';
+            } else {
+                panel.style.display = 'none';
+                toggleButton.textContent = 'Show Settings';
+            }
+        });
+ 
+        // Append the toggle button and settings panel to the document
+        document.body.appendChild(toggleButton);
+        document.body.appendChild(panel);
+    }
+ 
+ function getRandomColor() { const letters = "0123456789ACDEF"; // Exclude 'B' to avoid blue shades
+                            let color; do { color = "#"; for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * letters.length)]; } } while (isBlueColor(color)); // Retry if color is blue
+                            return color; } // Function to check if the color is blue or its shades
+    function isBlueColor(color) { const blueRegex = /#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})/i; const match = blueRegex.exec(color); if (match) { const r = parseInt(match[1], 16); const g = parseInt(match[2], 16); const b = parseInt(match[3], 16); return b > r && b > g; // Check if blue component is dominant
+                                                                                                                                                 } return false; }
+ 
+// Function to add click listener to buttons with the specified class
+function addClickListener(button) {
+    button.addEventListener('click', () => {
+        button.style.backgroundColor = getRandomColor();
+    });
+}
+ 
+// Function to observe DOM changes and add click listener to new buttons
+function observeDOMChanges() {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.classList && node.classList.contains('form-block-buttons-submit')) {
+                        addClickListener(node);
+                    }
+                });
+            }
+        });
+    });
+ 
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+ 
+// Call the function to observe DOM changes
+observeDOMChanges();
+ 
+ 
+function handleMiddleClickOnCopyButton(event) {
+    if (event.button === 1) { // Middle button (mouse wheel click)
+        navigator.clipboard.readText().then(text => {
+            if (text) {
+                const searchUrl = `https://aladin-kiev.com/ua/search/?search=${encodeURIComponent(text)}`;
+                window.open(searchUrl, '_blank');
+                console.log(`Открыта новая вкладка с поиском по запросу: ${text}`);
+            }
+        }).catch(err => {
+            console.log('Не удалось прочитать текст из буфера обмена:', err);
+        });
+    }
+}
+ 
+    function addClickHandlerToAllCopyButtons() {
+    const copyButtons = document.querySelectorAll('.copy-button');
+    copyButtons.forEach(button => {
+        if (!button.dataset.listenerAdded) {
+            button.addEventListener('mousedown', handleMiddleClickOnCopyButton);
+            button.dataset.listenerAdded = "true"; // Чтобы не добавлять обработчик несколько раз
+            console.log('Обработчик добавлен к кнопке.');
+        }
+    });
+}
+ 
+// Вызов функции для добавления обработчиков ко всем кнопкам
+ 
+ 
+// Функция для добавления обработчика к кнопке
+function addClickHandlerToCopyButton() {
+    const copyButton = document.querySelector('.copy-button');
+    if (copyButton && !copyButton.dataset.listenerAdded) {
+        copyButton.addEventListener('mousedown', handleMiddleClickOnCopyButton);
+        copyButton.dataset.listenerAdded = "true"; // Чтобы не добавлять обработчик несколько раз
+        console.log('Обработчик добавлен к кнопке.');
+    }
+}
+ 
+// Наблюдатель за изменениями DOM
+const observer = new MutationObserver(() => {
+   addClickHandlerToAllCopyButtons();
+});
+ 
+// Запускаем наблюдатель
+observer.observe(document.body, { childList: true, subtree: true });
+ 
+// Добавляем обработчик сразу при загрузке страницы
+addClickHandlerToCopyButton();
+ 
+    // Change the background image of the page
+    document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
+    document.body.style.backgroundSize = 'cover';
+ 
+    // Function to enable/disable video background
+    function setupVideoBackground() {
+        if (config.videoBackgroundEnabled) {
+            const video = document.createElement('video');
+            video.src = config.videoUrl;
+            video.autoplay = true;
+            video.loop = true;
+            video.muted = true;
+            video.style.position = 'fixed';
+            video.style.top = '0';
+            video.style.left = '0';
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            video.style.zIndex = '-1';
+            document.body.appendChild(video);
+        }
+    }
+ 
+    // Function to remove video background
+    function removeVideoBackground() {
+        const video = document.querySelector('video');
+        if (video) {
+            video.remove();
+        }
+    }
+ 
+    // Function to create snowfall effect
+    function createSnowfall() {
+        if (config.snowEnabled) {
+            const snowflakes = [];
+            for (let i = 0; i < config.snowflakeCount; i++) {
+                const snowflake = document.createElement('div');
+                snowflake.className = 'snowflake';
+                snowflake.style.position = 'fixed';
+                snowflake.style.top = `${Math.random() * 100}vh`;
+                snowflake.style.left = `${Math.random() * 100}vw`;
+                snowflake.style.width = '10px';
+                snowflake.style.height = '10px';
+                snowflake.style.backgroundColor = config.snowflakeColor;
+                snowflake.style.borderRadius = '50%';
+                snowflake.style.opacity = Math.random();
+                snowflake.style.zIndex = '9999';
+                snowflake.style.animation = `fall ${Math.random() * 5 + 5}s linear infinite`;
+                document.body.appendChild(snowflake);
+                snowflakes.push(snowflake);
+            }
+ 
+            // Add CSS for snowfall animation
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes fall {
+                    to {
+                        transform: translateY(100vh);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+ 
+    // Function to remove snowfall effect
+    function removeSnowfall() {
+        const snowflakes = document.querySelectorAll('.snowflake');
+        snowflakes.forEach(snowflake => snowflake.remove());
+    }
+ 
+ 
+ 
+function removeBracketsAndNumbers(event) {
+    event.preventDefault(); // Предотвращаем стандартное действие
+    const selection = window.getSelection().toString(); // Получаем выделенный текст
+    const modifiedText = selection.replace(/\[\d+\]|\(\d+\)/g, ''); // Удаляем скобки с цифрами
+    event.clipboardData.setData('text/plain', modifiedText); // Сохраняем измененный текст в буфер обмена
+}
+ 
+// Навешиваем обработчик на событие копирования
+document.addEventListener('copy', removeBracketsAndNumbers);
+ 
+    // Initialize all functions
+    createSettingsPanel();
+    setupVideoBackground();
+    if (config.snowEnabled) createSnowfall();
+ 
+})();
+ 
