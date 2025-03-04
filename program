@@ -1,16 +1,16 @@
 // ==UserScript==
-// @name         ProgramFixer
+// @name         Rulik Mod
 // @namespace    http://tampermonkey.net/
-// @version      1
+// @version      1.1
 // @description  Фіксииииии
 // @author       You
 // @match        *://disgusting.ivano-frankivsk.ua/*
 // @grant        none
 // ==/UserScript==
- 
+
 (function() {
     'use strict';
- 
+
     // Default settings
     const defaultConfig = {
         videoUrl: 'https://static.vecteezy.com/system/resources/previews/002/015/063/mp4/loop-top-view-snowflake-falling-on-white-wintertime-free-video.mp4',
@@ -21,7 +21,7 @@
         buttonSelector: '.form-block-buttons-submit',
         backgroundImageUrl: 'https://www.psdgraphics.com/file/white-snow-background.jpg'
     };
- 
+
    document.addEventListener('dblclick', function(event) {
         if (event.target.classList.contains('vs__selected')) {
             if (event.target.style.textDecoration === 'line-through' && event.target.style.color === 'red') {
@@ -37,7 +37,7 @@
     });
     // Load saved settings from localStorage or use default settings
     let config = JSON.parse(localStorage.getItem('userSettings')) || defaultConfig;
- 
+
     // Function to save settings to localStorage
     function saveSettings() {
         localStorage.setItem('userSettings', JSON.stringify(config));
@@ -46,16 +46,16 @@
     let backgroundChangeIntervalId = null;
     function startRulikMod() {
         if (backgroundChangeIntervalId) clearInterval(backgroundChangeIntervalId);
- 
+
         backgroundChangeIntervalId = setInterval(() => {
             const newBackground = `https://picsum.photos/1920/1080?random=${Date.now().png}`;
             document.body.style.backgroundImage = `url("${newBackground}")`;
             document.body.style.backgroundSize = 'cover';
         }, config.backgroundChangeInterval);
- 
+
         console.log('Rulikmod activated: Background will change every 30 minutes.');
     }
- 
+
     function stopRulikMod() {
         if (backgroundChangeIntervalId) {
             clearInterval(backgroundChangeIntervalId);
@@ -78,14 +78,14 @@
         panel.style.zIndex = '9999';
         panel.style.fontSize = '14px';
         panel.style.display = 'none'; // Start hidden
- 
+
         // Title (Centered Text)
         const title = document.createElement('h2');
-        title.textContent = 'Настройки';
+        title.textContent = 'Настройки Rulik Mod';
         title.style.textAlign = 'center';
         title.style.marginBottom = '20px'; // Space below the title
         panel.appendChild(title);
- 
+
         // Video URL input
         const videoUrlInput = document.createElement('input');
         videoUrlInput.type = 'text';
@@ -99,7 +99,7 @@
         panel.appendChild(document.createTextNode('Video URL: '));
         panel.appendChild(videoUrlInput);
         panel.appendChild(document.createElement('br'));
- 
+
         // Background image URL input
         const bgUrlInput = document.createElement('input');
         bgUrlInput.type = 'text';
@@ -114,7 +114,7 @@
         panel.appendChild(document.createTextNode('Background Image URL: '));
         panel.appendChild(bgUrlInput);
         panel.appendChild(document.createElement('br'));
- 
+
         // Snowfall checkbox
         const snowCheckbox = document.createElement('input');
         snowCheckbox.type = 'checkbox';
@@ -131,7 +131,7 @@
         panel.appendChild(document.createTextNode('Enable Snowfall: '));
         panel.appendChild(snowCheckbox);
         panel.appendChild(document.createElement('br'));
- 
+
         // Video background checkbox
         const videoBgCheckbox = document.createElement('input');
         videoBgCheckbox.type = 'checkbox';
@@ -148,7 +148,7 @@
         panel.appendChild(document.createTextNode('Enable Video Background: '));
         panel.appendChild(videoBgCheckbox);
         panel.appendChild(document.createElement('br'));
- 
+
         // Rulikmod checkbox
         const rulikModCheckbox = document.createElement('input');
         rulikModCheckbox.type = 'checkbox';
@@ -165,12 +165,12 @@
         panel.appendChild(document.createTextNode('Enable Rulikmod: '));
         panel.appendChild(rulikModCheckbox);
         panel.appendChild(document.createElement('br'));
- 
+
         // Toggle button for showing/hiding settings panel
         const toggleButton = document.createElement('button');
-        toggleButton.textContent = 'Show Settings';
+        toggleButton.textContent = 'Rulik Mod';
         toggleButton.style.position = 'fixed';
-        toggleButton.style.top = '10px';
+        toggleButton.style.top = '1100px';
         toggleButton.style.right = '10px';
         toggleButton.style.zIndex = '9999';
         toggleButton.style.padding = '5px 10px';
@@ -182,31 +182,31 @@
         toggleButton.addEventListener('click', () => {
             if (panel.style.display === 'none') {
                 panel.style.display = 'block';
-                toggleButton.textContent = 'Hide Settings';
+                toggleButton.textContent = 'Hide Rulik Mod Settings';
             } else {
                 panel.style.display = 'none';
-                toggleButton.textContent = 'Show Settings';
+                toggleButton.textContent = 'Rulik Mod';
             }
         });
- 
+
         // Append the toggle button and settings panel to the document
         document.body.appendChild(toggleButton);
         document.body.appendChild(panel);
     }
- 
+
  function getRandomColor() { const letters = "0123456789ACDEF"; // Exclude 'B' to avoid blue shades
                             let color; do { color = "#"; for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * letters.length)]; } } while (isBlueColor(color)); // Retry if color is blue
                             return color; } // Function to check if the color is blue or its shades
     function isBlueColor(color) { const blueRegex = /#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})/i; const match = blueRegex.exec(color); if (match) { const r = parseInt(match[1], 16); const g = parseInt(match[2], 16); const b = parseInt(match[3], 16); return b > r && b > g; // Check if blue component is dominant
                                                                                                                                                  } return false; }
- 
+
 // Function to add click listener to buttons with the specified class
 function addClickListener(button) {
     button.addEventListener('click', () => {
         button.style.backgroundColor = getRandomColor();
     });
 }
- 
+
 // Function to observe DOM changes and add click listener to new buttons
 function observeDOMChanges() {
     const observer = new MutationObserver((mutations) => {
@@ -220,14 +220,14 @@ function observeDOMChanges() {
             }
         });
     });
- 
+
     observer.observe(document.body, { childList: true, subtree: true });
 }
- 
+
 // Call the function to observe DOM changes
 observeDOMChanges();
- 
- 
+
+
 function handleMiddleClickOnCopyButton(event) {
     if (event.button === 1) { // Middle button (mouse wheel click)
         navigator.clipboard.readText().then(text => {
@@ -241,7 +241,7 @@ function handleMiddleClickOnCopyButton(event) {
         });
     }
 }
- 
+
     function addClickHandlerToAllCopyButtons() {
     const copyButtons = document.querySelectorAll('.copy-button');
     copyButtons.forEach(button => {
@@ -252,10 +252,10 @@ function handleMiddleClickOnCopyButton(event) {
         }
     });
 }
- 
+
 // Вызов функции для добавления обработчиков ко всем кнопкам
- 
- 
+
+
 // Функция для добавления обработчика к кнопке
 function addClickHandlerToCopyButton() {
     const copyButton = document.querySelector('.copy-button');
@@ -265,22 +265,22 @@ function addClickHandlerToCopyButton() {
         console.log('Обработчик добавлен к кнопке.');
     }
 }
- 
+
 // Наблюдатель за изменениями DOM
 const observer = new MutationObserver(() => {
    addClickHandlerToAllCopyButtons();
 });
- 
+
 // Запускаем наблюдатель
 observer.observe(document.body, { childList: true, subtree: true });
- 
+
 // Добавляем обработчик сразу при загрузке страницы
 addClickHandlerToCopyButton();
- 
+
     // Change the background image of the page
     document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
     document.body.style.backgroundSize = 'cover';
- 
+
     // Function to enable/disable video background
     function setupVideoBackground() {
         if (config.videoBackgroundEnabled) {
@@ -299,7 +299,7 @@ addClickHandlerToCopyButton();
             document.body.appendChild(video);
         }
     }
- 
+
     // Function to remove video background
     function removeVideoBackground() {
         const video = document.querySelector('video');
@@ -307,7 +307,7 @@ addClickHandlerToCopyButton();
             video.remove();
         }
     }
- 
+
     // Function to create snowfall effect
     function createSnowfall() {
         if (config.snowEnabled) {
@@ -328,7 +328,7 @@ addClickHandlerToCopyButton();
                 document.body.appendChild(snowflake);
                 snowflakes.push(snowflake);
             }
- 
+
             // Add CSS for snowfall animation
             const style = document.createElement('style');
             style.innerHTML = `
@@ -341,29 +341,59 @@ addClickHandlerToCopyButton();
             document.head.appendChild(style);
         }
     }
- 
+
     // Function to remove snowfall effect
     function removeSnowfall() {
         const snowflakes = document.querySelectorAll('.snowflake');
         snowflakes.forEach(snowflake => snowflake.remove());
     }
- 
- 
- 
+
+
+
 function removeBracketsAndNumbers(event) {
     event.preventDefault(); // Предотвращаем стандартное действие
     const selection = window.getSelection().toString(); // Получаем выделенный текст
     const modifiedText = selection.replace(/\[\d+\]|\(\d+\)/g, ''); // Удаляем скобки с цифрами
     event.clipboardData.setData('text/plain', modifiedText); // Сохраняем измененный текст в буфер обмена
 }
- 
+
+
+function replaceChars(event) {
+        event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
+    }
+
+    // Function to add event listener with a delay
+    function addEventListenerWithDelay() {
+        var field = document.querySelector('#weight_1.form-shipment-store-table-left-row-control');
+        if (field) {
+            field.addEventListener('input', replaceChars);
+        }
+    }
+
+    // Observer to detect dynamically added elements
+    var observerReplace = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            var newNodes = mutation.addedNodes;
+            newNodes.forEach(function(node) {
+                if (node.id === 'weight_1' && node.classList.contains('form-shipment-store-table-left-row-control')) {
+                    addEventListenerWithDelay();
+                }
+            });
+        });
+    });
+
+    // Start observing the document for added nodes
+    observerReplace.observe(document.body, { childList: true, subtree: true });
+
+    // Also check for the element periodically in case it's missed by the observer
+    setInterval(addEventListenerWithDelay, 2000); // 2-second interval
 // Навешиваем обработчик на событие копирования
 document.addEventListener('copy', removeBracketsAndNumbers);
- 
+
     // Initialize all functions
     createSettingsPanel();
     setupVideoBackground();
     if (config.snowEnabled) createSnowfall();
- 
+
 })();
- 
+
