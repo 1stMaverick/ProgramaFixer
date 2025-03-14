@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      1.9.1
+// @version      1.9.2
 // @description  Фіксииииии з GitHub баркодами та всіма темами
 // @author       You
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -11,7 +11,6 @@
 (function() {
     'use strict';
 
-    // Початкове визначення barcodeMap як порожнього об'єкта
     let barcodeMap = {};
 
     // Завантаження barcodeMap з GitHub
@@ -20,8 +19,7 @@
             const url = 'https://raw.githubusercontent.com/1stMaverick/ProgramaFixer/refs/heads/main/barcodes.json';
             const response = await fetch(url);
             if (!response.ok) throw new Error('Не вдалося завантажити barcodes.json');
-            const data = await response.json();
-            barcodeMap = data;
+            barcodeMap = await response.json();
             console.log('barcodeMap завантажено з GitHub:', barcodeMap);
         } catch (error) {
             console.error('Помилка завантаження barcodeMap:', error);
@@ -54,7 +52,6 @@
     let config = JSON.parse(localStorage.getItem('userSettings')) || defaultConfig;
     const saveSettings = () => localStorage.setItem('userSettings', JSON.stringify(config));
 
-    // Повернення всіх тем
     const applyTheme = () => {
         const themes = {
             dark: { body: { backgroundColor: '#2c3e50', color: '#ecf0f1' }, panel: { background: 'linear-gradient(135deg, #2c3e50, #34495e)', color: '#ecf0f1' }, inputs: { background: '#ecf0f1', color: '#2c3e50' }, hover: { color: '#3498db' } },
@@ -90,7 +87,8 @@
             });
         }
 
-        setTimeout(() => {
+        clearTimeout(window.themeTimeout);
+        window.themeTimeout = setTimeout(() => {
             body.style.transition = '';
             if (panel) {
                 panel.style.transition = '';
@@ -162,4 +160,479 @@
             saveSettings();
             config.snowEnabled ? createSnowfall() : removeSnowfall();
         });
-       
+        panel.appendChild(createLabel('Enable Snowfall: ', snowCheckbox));
+
+        const videoBgCheckbox = document.createElement('input');
+        videoBgCheckbox.type = 'checkbox';
+        videoBgCheckbox.checked = config.videoBackgroundEnabled;
+        videoBgCheckbox.addEventListener('change', (e) => {
+            config.videoBackgroundEnabled = e.target.checked;
+            saveSettings();
+            config.videoBackgroundEnabled ? setupVideoBackground() : removeVideoBackground();
+        });
+        panel.appendChild(createLabel('Enable Video BG: ', videoBgCheckbox));
+
+        const mouseButtonSelect = document.createElement('select');
+        const mouseOptions = [
+            { value: 0, text: 'Left Button (0)' },
+            { value: 1, text: 'Middle Button (1)' },
+            { value: 2, text: 'Right Button (2)' }
+        ];
+        mouseOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (parseInt(opt.value, 10) === config.copyButtonMouse) option.selected = true;
+            mouseButtonSelect.appendChild(option);
+        });
+        mouseButtonSelect.addEventListener('change', (e) => {
+            config.copyButtonMouse = parseInt(e.target.value, 10);
+            saveSettings();
+        });
+        panel.appendChild(createLabel('Copy Button: ', mouseButtonSelect));
+
+        const themeSelect = document.createElement('select');
+        const themeOptions = [
+            { value: 'dark', text: 'Dark' },
+            { value: 'light', text: 'Light' },
+            { value: 'neon', text: 'Neon' },
+            { value: 'pastel', text: 'Pastel' },
+            { value: 'solarized', text: 'Solarized' },
+            { value: 'monochrome', text: 'Monochrome' },
+            { value: 'cyberpunk', text: 'Cyberpunk' },
+            { value: 'forest', text: 'Forest' },
+            { value: 'dusk', text: 'Dusk' },
+            { value: 'stone', text: 'Stone' }
+        ];
+        themeOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (opt.value === config.theme) option.selected = true;
+            themeSelect.appendChild(option);
+        });
+        themeSelect.addEventListener('change', (e) => {
+            config.theme = e.target.value;
+            saveSettings();
+            applyTheme();
+        });
+        panel.appendChild(createLabel('Theme: ', themeSelect));
+
+        const videoPlayerCheckbox = document.createElement('input');
+        videoPlayerCheckbox.type = 'checkbox';
+        videoPlayerCheckbox.checked = config.videoPlayerEnabled;
+        videoPlayerCheckbox.addEventListener('change', (e) => {
+            config.videoPlayerEnabled = e.target.checked;
+            saveSettings();
+            config.videoPlayerEnabled ? createVideoPlayer() : removeVideoPlayer();
+        });
+        panel.appendChild(createLabel('Enable Video Player: ', videoPlayerCheckbox));
+
+        const videoPlayerUrlInput = document.createElement('input');
+        videoPlayerUrlInput.type = 'text';
+        videoPlayerUrlInput.value = config.videoPlayerUrl;
+        videoPlayerUrlInput.placeholder = 'YouTube/Twitch URL';
+        videoPlayerUrlInput.addEventListener('input', (e) => {
+            config.videoPlayerUrl = e.target.value;
+            saveSettings();
+            if (config.videoPlayerEnabled) { removeVideoPlayer(); createVideoPlayer(); }
+        });
+        panel.appendChild(createLabel('Player URL: ', videoPlayerUrlInput));
+
+        const videoPlayerTypeSelect = document.createElement('select');
+        const playerTypes = [
+            { value: 'youtube', text: 'YouTube' },
+            { value: 'twitch', text: 'Twitch' }
+        ];
+        playerTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.value;
+            option.textContent = type.text;
+            if (type.value === config.videoPlayerType) option.selected = true;
+            videoPlayerTypeSelect.appendChild(option);
+        });
+        videoPlayerTypeSelect.addEventListener('change', (e) => {
+            config.videoPlayerType = e.target.value;
+            saveSettings();
+            if (config.videoPlayerEnabled) { removeVideoPlayer(); createVideoPlayer(); }
+        });
+        panel.appendChild(createLabel('Player Type: ', videoPlayerTypeSelect));
+
+        const cursorCheckbox = document.createElement('input');
+        cursorCheckbox.type = 'checkbox';
+        cursorCheckbox.checked = config.customCursorEnabled;
+        cursorCheckbox.addEventListener('change', (e) => {
+            config.customCursorEnabled = e.target.checked;
+            saveSettings();
+            applyCustomCursor();
+        });
+        panel.appendChild(createLabel('Custom Cursor: ', cursorCheckbox));
+
+        const cursorStyleSelect = document.createElement('select');
+        const cursorOptions = [
+            { value: 'circle', text: 'Circle' },
+            { value: 'star', text: 'Star' },
+            { value: 'cross', text: 'Cross' }
+        ];
+        cursorOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (opt.value === config.cursorStyle) option.selected = true;
+            cursorStyleSelect.appendChild(option);
+        });
+        cursorStyleSelect.addEventListener('change', (e) => {
+            config.cursorStyle = e.target.value;
+            saveSettings();
+            applyCustomCursor();
+        });
+        panel.appendChild(createLabel('Cursor Style: ', cursorStyleSelect));
+
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'toggle-button';
+        toggleButton.textContent = 'Rulik Mod 2.0';
+        toggleButton.addEventListener('click', () => {
+            if (panel.classList.contains('visible')) {
+                panel.classList.remove('visible');
+                panel.classList.add('hidden');
+                setTimeout(() => toggleButton.textContent = 'Rulik Mod 2.0', 300);
+            } else {
+                panel.classList.remove('hidden');
+                panel.classList.add('visible');
+                setTimeout(() => toggleButton.textContent = 'Hide Settings', 300);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!panel.contains(e.target) && !toggleButton.contains(e.target) && panel.classList.contains('visible')) {
+                panel.classList.remove('visible');
+                panel.classList.add('hidden');
+                toggleButton.textContent = 'Rulik Mod 2.0';
+            }
+        });
+
+        let isDraggingPanel = false;
+        let panelX, panelY;
+        title.addEventListener('mousedown', (e) => {
+            isDraggingPanel = true;
+            panelX = e.clientX - parseInt(panel.style.left || 20);
+            panelY = e.clientY - parseInt(panel.style.top || 20);
+            title.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingPanel) return;
+            let newX = e.clientX - panelX;
+            let newY = e.clientY - panelY;
+            newX = Math.max(0, Math.min(newX, window.innerWidth - panel.offsetWidth));
+            newY = Math.max(0, Math.min(newY, window.innerHeight - panel.offsetHeight));
+            panel.style.left = `${newX}px`;
+            panel.style.top = `${newY}px`;
+        });
+        document.addEventListener('mouseup', () => {
+            if (isDraggingPanel) {
+                isDraggingPanel = false;
+                title.style.cursor = 'grab';
+            }
+        });
+
+        document.body.appendChild(toggleButton);
+        document.body.appendChild(panel);
+        applyTheme();
+    };
+
+    const createVideoPlayer = () => {
+        if (!config.videoPlayerEnabled || !config.videoPlayerUrl) return;
+        removeVideoPlayer();
+        const container = document.createElement('div');
+        container.id = 'video-player-container';
+        Object.assign(container.style, {
+            left: `${config.videoPlayerX}px`,
+            top: `${config.videoPlayerY}px`,
+            width: `${config.videoPlayerWidth}px`,
+            height: `${config.videoPlayerHeight}px`
+        });
+
+        const player = document.createElement('iframe');
+        if (config.videoPlayerType === 'youtube') {
+            const videoId = config.videoPlayerUrl.split('v=')[1]?.split('&')[0] || config.videoPlayerUrl.split('/').pop();
+            player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&controls=1`;
+        } else if (config.videoPlayerType === 'twitch') {
+            const channel = config.videoPlayerUrl.split('/').pop();
+            player.src = `https://player.twitch.tv/?channel=${channel}&parent=${window.location.hostname}&autoplay=true`;
+        }
+        container.appendChild(player);
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        container.appendChild(resizeHandle);
+
+        let isDraggingPlayer = false;
+        let playerX, playerY;
+        container.addEventListener('mousedown', (e) => {
+            if (e.target === resizeHandle || e.target.tagName === 'IFRAME') return;
+            isDraggingPlayer = true;
+            playerX = e.clientX - config.videoPlayerX;
+            playerY = e.clientY - config.videoPlayerY;
+            container.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingPlayer) return;
+            config.videoPlayerX = Math.max(0, Math.min(e.clientX - playerX, window.innerWidth - container.offsetWidth));
+            config.videoPlayerY = Math.max(0, Math.min(e.clientY - playerY, window.innerHeight - container.offsetHeight));
+            container.style.left = `${config.videoPlayerX}px`;
+            container.style.top = `${config.videoPlayerY}px`;
+            saveSettings();
+        });
+        document.addEventListener('mouseup', () => {
+            if (isDraggingPlayer) {
+                isDraggingPlayer = false;
+                container.style.cursor = 'move';
+            }
+        });
+
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = config.videoPlayerWidth;
+            startHeight = config.videoPlayerHeight;
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            config.videoPlayerWidth = Math.max(100, startWidth + (e.clientX - startX));
+            config.videoPlayerHeight = Math.max(56, startHeight + (e.clientY - startY));
+            container.style.width = `${config.videoPlayerWidth}px`;
+            container.style.height = `${config.videoPlayerHeight}px`;
+            saveSettings();
+        });
+        document.addEventListener('mouseup', () => {
+            if (isResizing) isResizing = false;
+        });
+
+        document.body.appendChild(container);
+    };
+
+    const removeVideoPlayer = () => {
+        const container = document.getElementById('video-player-container');
+        if (container) container.remove();
+    };
+
+    const applyCustomCursor = () => {
+        document.body.style.cursor = config.customCursorEnabled ? 
+            ({
+                circle: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><circle cx=\'16\' cy=\'16\' r=\'10\' fill=\'red\'/></svg>") 16 16, auto',
+                star: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><polygon points=\'16,2 20,12 30,12 22,20 24,30 16,24 8,30 10,20 2,12 12,12\' fill=\'yellow\'/></svg>") 16 16, auto',
+                cross: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><line x1=\'8\' y1=\'8\' x2=\'24\' y2=\'24\' stroke=\'blue\' stroke-width=\'4\'/><line x1=\'24\' y1=\'8\' x2=\'8\' y2=\'24\' stroke=\'blue\' stroke-width=\'4\'/></svg>") 16 16, auto'
+            }[config.cursorStyle] || 'auto') : 'auto';
+    };
+
+    const getRandomColor = () => {
+        const letters = "0123456789ACDEF";
+        let color;
+        do {
+            color = "#" + Array.from({ length: 6 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+        } while (isBlueColor(color));
+        return color;
+    };
+
+    const isBlueColor = color => {
+        const [, r, g, b] = color.match(/#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})/i) || [];
+        return b && parseInt(b, 16) > parseInt(r, 16) && parseInt(b, 16) > parseInt(g, 16);
+    };
+
+    const addClickListener = button => {
+        button.addEventListener('click', () => {
+            button.style.backgroundColor = getRandomColor();
+            button.disabled = true;
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
+            setTimeout(() => {
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
+            }, 3000);
+        });
+    };
+
+    const observeDOMChanges = () => {
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1 && node.classList.contains('form-block-buttons-submit')) {
+                        addClickListener(node);
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    };
+
+    const handleMiddleClickOnCopyButton = event => {
+        if (event.button === config.copyButtonMouse) {
+            navigator.clipboard.readText()
+                .then(text => { if (text) window.open(`https://aladin-kiev.com/ua/search/?search=${encodeURIComponent(text)}`, '_blank'); })
+                .catch(err => console.log('Clipboard error:', err));
+        }
+    };
+
+    const addClickHandlerToAllCopyButtons = () => {
+        document.querySelectorAll('.copy-button').forEach(button => {
+            if (!button.dataset.listenerAdded) {
+                button.addEventListener('mousedown', handleMiddleClickOnCopyButton);
+                button.dataset.listenerAdded = 'true';
+            }
+        });
+    };
+
+    const setupVideoBackground = () => {
+        if (!config.videoBackgroundEnabled || !config.videoUrl) return;
+        removeVideoBackground();
+        const video = document.createElement('video');
+        Object.assign(video, { src: config.videoUrl, autoplay: true, loop: true, muted: true });
+        Object.assign(video.style, { position: 'fixed', top: '0', left: '0', width: '100%', height: '100%', objectFit: 'cover', zIndex: '-1' });
+        document.body.appendChild(video);
+    };
+
+    const removeVideoBackground = () => {
+        const video = document.querySelector('video');
+        if (video) video.remove();
+    };
+
+    const createSnowfall = () => {
+        if (!config.snowEnabled) return;
+        removeSnowfall();
+        for (let i = 0; i < config.snowflakeCount; i++) {
+            const snowflake = document.createElement('div');
+            Object.assign(snowflake.style, {
+                position: 'fixed',
+                top: `${Math.random() * 100}vh`,
+                left: `${Math.random() * 100}vw`,
+                width: '10px',
+                height: '10px',
+                backgroundColor: config.snowflakeColor,
+                borderRadius: '50%',
+                opacity: Math.random(),
+                zIndex: '9999',
+                animation: `fall ${Math.random() * 5 + 5}s linear infinite`
+            });
+            snowflake.className = 'snowflake';
+            document.body.appendChild(snowflake);
+        }
+        const style = document.createElement('style');
+        style.innerHTML = '@keyframes fall { to { transform: translateY(100vh); } }';
+        document.head.appendChild(style);
+    };
+
+    const removeSnowfall = () => {
+        document.querySelectorAll('.snowflake').forEach(s => s.remove());
+        const style = document.querySelector('style[innerHTML*="fall"]');
+        if (style) style.remove();
+    };
+
+    const removeBracketsAndNumbers = event => {
+        event.preventDefault();
+        const selection = window.getSelection().toString();
+        const modifiedText = selection.replace(/\[\d+\]|\(\d+\)/g, '');
+        event.clipboardData.setData('text/plain', modifiedText);
+    };
+    document.addEventListener('copy', removeBracketsAndNumbers);
+
+    const replaceChars = event => event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
+
+    const addEventListenerWithDelay = () => {
+        const field = document.querySelector('#weight_1.form-shipment-store-table-left-row-control');
+        if (field && !field.dataset.listenerAdded) {
+            field.addEventListener('input', replaceChars);
+            field.dataset.listenerAdded = 'true';
+        }
+    };
+
+    const observerReplace = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1 && node.id === 'weight_1' && node.classList.contains('form-shipment-store-table-left-row-control')) {
+                    addEventListenerWithDelay();
+                }
+            });
+        });
+    });
+    observerReplace.observe(document.body, { childList: true, subtree: true });
+    setInterval(addEventListenerWithDelay, 2000);
+
+    const replaceInputValue = event => {
+        let inputValue = event.target.value.trim().replace(/[їъ\]]/g, '');
+        const correctBarcode = barcodeMap[inputValue];
+        if (correctBarcode) {
+            event.target.value = correctBarcode;
+            ['input', 'keydown'].forEach(type => {
+                const evt = type === 'input' 
+                    ? new Event('input', { bubbles: true, cancelable: true })
+                    : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
+                event.target.dispatchEvent(evt);
+            });
+        }
+    };
+
+    const debounce = (func, wait) => {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    };
+
+    const replaceAndClearBarcode = debounce(() => {
+        const barcodeInput = document.querySelector('#barcode.barcode-input');
+        if (barcodeInput && barcodeInput.value) {
+            let value = barcodeInput.value.trim().replace(/[їъ\]]/g, '');
+            const correctBarcode = barcodeMap[value];
+            if (correctBarcode) {
+                barcodeInput.value = correctBarcode;
+                ['input', 'keydown'].forEach(type => {
+                    const evt = type === 'input' 
+                        ? new Event('input', { bubbles: true, cancelable: true })
+                        : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
+                    barcodeInput.dispatchEvent(evt);
+                });
+                setTimeout(() => { if (barcodeInput) barcodeInput.value = ''; }, 50);
+            }
+        }
+    }, 250);
+
+    setInterval(replaceAndClearBarcode, 250);
+    const observerClearBarcode = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') replaceAndClearBarcode();
+        });
+    });
+    observerClearBarcode.observe(document.body, { childList: true, subtree: true });
+    document.body.addEventListener('input', replaceInputValue);
+
+    // Ініціалізація
+    loadBarcodeMapFromGitHub().then(() => {
+        document.body.style.backgroundImage = config.backgroundImageUrl ? `url("${config.backgroundImageUrl}")` : '';
+        document.body.style.backgroundSize = 'cover';
+        createSettingsPanel();
+        if (config.videoBackgroundEnabled) setupVideoBackground();
+        if (config.snowEnabled) createSnowfall();
+        observeDOMChanges();
+        addClickHandlerToAllCopyButtons();
+        applyTheme();
+        if (config.videoPlayerEnabled) createVideoPlayer();
+        applyCustomCursor();
+
+        const debouncedResize = debounce(() => {
+            config.videoPlayerY = window.innerHeight - config.videoPlayerHeight - 20;
+            if (config.videoPlayerEnabled) {
+                removeVideoPlayer();
+                createVideoPlayer();
+            }
+        }, 100);
+        window.addEventListener('resize', debouncedResize);
+    });
+})();
