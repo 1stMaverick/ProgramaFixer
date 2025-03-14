@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      1.9.3
+// @version      1.9.4
 // @description  Фіксииииии з GitHub баркодами та всіма темами
 // @author       You
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -24,6 +24,7 @@
         } catch (error) {
             console.error('Помилка завантаження barcodeMap:', error);
             barcodeMap = { ']C17460304025002': '2100100137359', '8991475068232': '2100100107567' }; // Fallback
+            console.log('Використано запасний barcodeMap:', barcodeMap);
         }
     }
 
@@ -448,8 +449,10 @@
         return b && parseInt(b, 16) > parseInt(r, 16) && parseInt(b, 16) > parseInt(g, 16);
     };
 
+    // Виправлено кнопку submit
     const addClickListener = button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', (e) => {
+            console.log('Кнопка submit натиснута:', button);
             button.style.backgroundColor = getRandomColor();
             button.disabled = true;
             button.style.opacity = '0.5';
@@ -459,6 +462,10 @@
                 button.style.opacity = '1';
                 button.style.cursor = 'pointer';
             }, 3000);
+            // Не блокуємо стандартну поведінку форми
+            if (button.form) {
+                console.log('Дозволяємо відправку форми для кнопки:', button);
+            }
         });
     };
 
@@ -467,12 +474,18 @@
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === 1 && node.classList.contains('form-block-buttons-submit')) {
+                        console.log('Виявлено нову кнопку submit:', node);
                         addClickListener(node);
                     }
                 });
             });
         });
         observer.observe(document.body, { childList: true, subtree: true });
+        // Додаємо слухачі до існуючих кнопок
+        document.querySelectorAll('.form-block-buttons-submit').forEach(button => {
+            console.log('Додано слухач до існуючої кнопки submit:', button);
+            addClickListener(button);
+        });
     };
 
     const handleMiddleClickOnCopyButton = event => {
@@ -545,9 +558,8 @@
     };
     document.addEventListener('copy', removeBracketsAndNumbers);
 
-    // Виправлено "no return assign"
     const replaceChars = event => {
-        return event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
+        event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
     };
 
     const addEventListenerWithDelay = () => {
@@ -570,58 +582,51 @@
     observerReplace.observe(document.body, { childList: true, subtree: true });
     setInterval(addEventListenerWithDelay, 2000);
 
-    // Виправлено "no return assign" (~рядок 298)
-    const replaceInputValue = event => {
-        let inputValue = event.target.value.trim().replace(/[їъ\]]/g, '');
-        const correctBarcode = barcodeMap[inputValue];
-        if (correctBarcode) {
-            event.target.value = correctBarcode;
-            ['input', 'keydown'].forEach(type => {
-                const evt = type === 'input' 
-                    ? new Event('input', { bubbles: true, cancelable: true })
-                    : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
-                event.target.dispatchEvent(evt);
-            });
-        }
-        return event.target.value; // Додано return для уникнення попередження
-    };
-
-    const debounce = (func, wait) => {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func(...args), wait);
-        };
-    };
-
-    // Виправлено "no return assign" (~рядок 302 у контексті replaceAndClearBarcode)
-    const replaceAndClearBarcode = debounce(() => {
+    // Виправлено заміну штрихкодів
+    const replaceAndClearBarcode = () => {
         const barcodeInput = document.querySelector('#barcode.barcode-input');
         if (barcodeInput && barcodeInput.value) {
+            console.log('Знайдено поле штрихкоду з значенням:', barcodeInput.value);
             let value = barcodeInput.value.trim().replace(/[їъ\]]/g, '');
             const correctBarcode = barcodeMap[value];
             if (correctBarcode) {
+                console.log(`Замінюємо штрихкод: ${value} -> ${correctBarcode}`);
                 barcodeInput.value = correctBarcode;
-                ['input', 'keydown'].forEach(type => {
-                    const evt = type === 'input' 
-                        ? new Event('input', { bubbles: true, cancelable: true })
-                        : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
-                    barcodeInput.dispatchEvent(evt);
-                });
-                setTimeout(() => { if (barcodeInput) barcodeInput.value = ''; }, 50);
+                // Імітуємо введення та натискання Enter
+                const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+                const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
+                barcodeInput.dispatchEvent(inputEvent);
+                barcodeInput.dispatchEvent(enterEvent);
+                // Очищаємо поле через 50 мс
+                setTimeout(() => {
+                    if (barcodeInput) {
+                        barcodeInput.value = '';
+                        console.log('Поле штрихкоду очищено');
+                    }
+                }, 50);
+            } else {
+                console.log('Штрихкод не знайдено в barcodeMap:', value);
             }
-            return barcodeInput.value; // Додано return
         }
-    }, 250);
+    };
 
-    setInterval(replaceAndClearBarcode, 250);
-    const observerClearBarcode = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            if (mutation.type === 'childList') replaceAndClearBarcode();
-        });
+    // Постійний моніторинг штрихкодів
+    setInterval(replaceAndClearBarcode, 100); // Зменшено до 100 мс для швидшої реакції
+    const observerClearBarcode = new MutationObserver(() => {
+        replaceAndClearBarcode();
     });
     observerClearBarcode.observe(document.body, { childList: true, subtree: true });
-    document.body.addEventListener('input', replaceInputValue);
+
+    // Додаємо слухач input для миттєвої реакції
+    const addBarcodeListener = () => {
+        const barcodeInput = document.querySelector('#barcode.barcode-input');
+        if (barcodeInput && !barcodeInput.dataset.listenerAdded) {
+            barcodeInput.addEventListener('input', replaceAndClearBarcode);
+            barcodeInput.dataset.listenerAdded = 'true';
+            console.log('Додано слухач input до поля штрихкоду');
+        }
+    };
+    setInterval(addBarcodeListener, 1000); // Перевіряємо кожну секунду для динамічних елементів
 
     // Ініціалізація
     loadBarcodeMapFromGitHub().then(() => {
@@ -636,13 +641,13 @@
         if (config.videoPlayerEnabled) createVideoPlayer();
         applyCustomCursor();
 
-        const debouncedResize = debounce(() => {
+        const debouncedResize = () => {
             config.videoPlayerY = window.innerHeight - config.videoPlayerHeight - 20;
             if (config.videoPlayerEnabled) {
                 removeVideoPlayer();
                 createVideoPlayer();
             }
-        }, 100);
+        };
         window.addEventListener('resize', debouncedResize);
     });
 })();
