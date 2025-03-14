@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      1.9.2
+// @version      1.9.3
 // @description  Фіксииииии з GitHub баркодами та всіма темами
 // @author       You
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -76,26 +76,29 @@
             panel.style.transition = 'background 0.5s ease, color 0.5s ease';
             Object.assign(panel.style, selectedTheme.panel);
             const inputs = panel.querySelectorAll('input[type="text"], select');
+            const labels = panel.querySelectorAll('label');
             inputs.forEach(input => {
                 input.style.transition = 'background 0.5s ease, color 0.5s ease';
                 Object.assign(input.style, selectedTheme.inputs);
             });
-            const labels = panel.querySelectorAll('label');
             labels.forEach(label => {
                 label.style.transition = 'color 0.5s ease';
                 label.style.color = selectedTheme.body.color;
             });
-        }
 
-        clearTimeout(window.themeTimeout);
-        window.themeTimeout = setTimeout(() => {
-            body.style.transition = '';
-            if (panel) {
+            clearTimeout(window.themeTimeout);
+            window.themeTimeout = setTimeout(() => {
+                body.style.transition = '';
                 panel.style.transition = '';
                 inputs.forEach(input => input.style.transition = '');
                 labels.forEach(label => label.style.transition = '');
-            }
-        }, 500);
+            }, 500);
+        } else {
+            clearTimeout(window.themeTimeout);
+            window.themeTimeout = setTimeout(() => {
+                body.style.transition = '';
+            }, 500);
+        }
     };
 
     const createSettingsPanel = () => {
@@ -542,7 +545,10 @@
     };
     document.addEventListener('copy', removeBracketsAndNumbers);
 
-    const replaceChars = event => event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
+    // Виправлено "no return assign"
+    const replaceChars = event => {
+        return event.target.value = event.target.value.replace(/[\s,юб]/g, '.');
+    };
 
     const addEventListenerWithDelay = () => {
         const field = document.querySelector('#weight_1.form-shipment-store-table-left-row-control');
@@ -564,6 +570,7 @@
     observerReplace.observe(document.body, { childList: true, subtree: true });
     setInterval(addEventListenerWithDelay, 2000);
 
+    // Виправлено "no return assign" (~рядок 298)
     const replaceInputValue = event => {
         let inputValue = event.target.value.trim().replace(/[їъ\]]/g, '');
         const correctBarcode = barcodeMap[inputValue];
@@ -576,6 +583,7 @@
                 event.target.dispatchEvent(evt);
             });
         }
+        return event.target.value; // Додано return для уникнення попередження
     };
 
     const debounce = (func, wait) => {
@@ -586,6 +594,7 @@
         };
     };
 
+    // Виправлено "no return assign" (~рядок 302 у контексті replaceAndClearBarcode)
     const replaceAndClearBarcode = debounce(() => {
         const barcodeInput = document.querySelector('#barcode.barcode-input');
         if (barcodeInput && barcodeInput.value) {
@@ -601,6 +610,7 @@
                 });
                 setTimeout(() => { if (barcodeInput) barcodeInput.value = ''; }, 50);
             }
+            return barcodeInput.value; // Додано return
         }
     }, 250);
 
