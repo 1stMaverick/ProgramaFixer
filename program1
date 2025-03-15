@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @description  Шось тут таке
 // @author       Щоденник
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -22,11 +22,12 @@
         buttonSelector: '.form-block-buttons-submit',
         backgroundImageUrl: '',
         mouseButton: 1,
-        theme: 'default' // Изменил дефолтную тему на 'default'
+        theme: 'default'
     };
 
-    // Themes with new structure, including 'default' for no theme
+    // Themes with new structure, including 'default' and 'off'
     const themes = {
+        off: { body: { backgroundColor: '', color: '' }, panel: { background: '', color: '' }, inputs: { background: '', color: '' }, hover: { color: '' } },
         default: { body: { backgroundColor: '', color: '' }, panel: { background: 'linear-gradient(145deg, #1e272e, #2f3640)', color: '#dfe6e9' }, inputs: { background: 'rgba(255, 255, 255, 0.08)', color: '#dfe6e9' }, hover: { color: '' } },
         dark: { body: { backgroundColor: '#2c3e50', color: '#ecf0f1' }, panel: { background: 'linear-gradient(135deg, #2c3e50, #34495e)', color: '#ecf0f1' }, inputs: { background: '#ecf0f1', color: '#2c3e50' }, hover: { color: '#3498db' } },
         light: { body: { backgroundColor: '#ecf0f1', color: '#2c3e50' }, panel: { background: 'linear-gradient(135deg, #ecf0f1, #dfe6e9)', color: '#2c3e50' }, inputs: { background: '#34495e', color: '#ecf0f1' }, hover: { color: '#e74c3c' } },
@@ -90,7 +91,7 @@
     function applyTheme() {
         const selectedTheme = themes[config.theme] || themes['default'];
         
-        // Применяем цвета текста и hover всегда
+        // Применяем цвета текста и hover
         document.body.style.color = selectedTheme.body.color;
         document.querySelectorAll('button, a').forEach(el => {
             el.style.color = selectedTheme.hover.color;
@@ -287,7 +288,8 @@
         const themeSelect = document.createElement('select');
         styleInput(themeSelect);
         const themeOptions = [
-            { value: 'default', text: 'Default (No Theme)' }, // Добавлена опция "без темы"
+            { value: 'off', text: 'Off (No Styling)' }, // Новая опция "Off"
+            { value: 'default', text: 'Default (No Theme)' },
             { value: 'dark', text: 'Dark' },
             { value: 'light', text: 'Light' },
             { value: 'neon', text: 'Neon' },
