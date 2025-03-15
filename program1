@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      2.0
 // @description  Шось тут таке
 // @author       Щоденник
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -16,31 +16,34 @@
         videoUrl: 'https://cdn.pixabay.com/video/2020/04/09/35573-407595474_large.mp4',
         snowEnabled: false,
         videoBackgroundEnabled: true,
-        backgroundEnabled: true, // New setting for background toggle
+        backgroundEnabled: true,
         snowflakeCount: 100,
         snowflakeColor: 'white',
         buttonSelector: '.form-block-buttons-submit',
         backgroundImageUrl: '',
         mouseButton: 1,
-        theme: 'default'
+        theme: 'light'
     };
 
+    // Themes with new structure
     const themes = {
-        'default': { backgroundColor: '#f5f6f5', color: '#333333', accent: '#4a90e2' },
-        'twilight': { backgroundColor: '#2e3440', color: '#d8dee9', accent: '#88c0d0' },
-        'sandstone': { backgroundColor: '#e8d5b9', color: '#5a4633', accent: '#d08770' },
-        'moss': { backgroundColor: '#d8e2dc', color: '#4a5a4a', accent: '#8ab07a' },
-        'dusk': { backgroundColor: '#4a3f5e', color: '#e0d7e9', accent: '#b39ddb' },
-        'pebble': { backgroundColor: '#d9d8d5', color: '#4f5052', accent: '#e57373' },
-        'clay': { backgroundColor: '#c8a89a', color: '#3f2f2a', accent: '#f4a261' },
-        'haze': { backgroundColor: '#e0e4e8', color: '#445566', accent: '#6b7280' },
-        'olive': { backgroundColor: '#d9d7b6', color: '#5a5843', accent: '#a9b665' },
-        'mist': { backgroundColor: '#e4e9e8', color: '#4a5e5e', accent: '#81a1c1' },
-        'linen': { backgroundColor: '#f0e9e0', color: '#5a4f47', accent: '#d69d7e' },
-        'sage': { backgroundColor: '#c9d3c5', color: '#4a524a', accent: '#a3be8c' }
+        dark: { body: { backgroundColor: '#2c3e50', color: '#ecf0f1' }, panel: { background: 'linear-gradient(135deg, #2c3e50, #34495e)', color: '#ecf0f1' }, inputs: { background: '#ecf0f1', color: '#2c3e50' }, hover: { color: '#3498db' } },
+        light: { body: { backgroundColor: '#ecf0f1', color: '#2c3e50' }, panel: { background: 'linear-gradient(135deg, #ecf0f1, #dfe6e9)', color: '#2c3e50' }, inputs: { background: '#34495e', color: '#ecf0f1' }, hover: { color: '#e74c3c' } },
+        neon: { body: { backgroundColor: '#1a1a1a', color: '#00ffcc' }, panel: { background: 'linear-gradient(135deg, #1a1a1a, #333333)', color: '#00ffcc' }, inputs: { background: '#00ffcc', color: '#1a1a1a' }, hover: { color: '#ff00ff' } },
+        pastel: { body: { backgroundColor: '#f7e7ce', color: '#6b5b95' }, panel: { background: 'linear-gradient(135deg, #f7e7ce, #d5c6e0)', color: '#6b5b95' }, inputs: { background: '#fff0f5', color: '#6b5b95' }, hover: { color: '#ff6f61' } },
+        solarized: { body: { backgroundColor: '#002b36', color: '#93a1a1' }, panel: { background: 'linear-gradient(135deg, #002b36, #073642)', color: '#93a1a1' }, inputs: { background: '#fdf6e3', color: '#657b83' }, hover: { color: '#b58900' } },
+        monochrome: { body: { backgroundColor: '#333333', color: '#cccccc' }, panel: { background: 'linear-gradient(135deg, #333333, #555555)', color: '#cccccc' }, inputs: { background: '#ffffff', color: '#333333' }, hover: { color: '#999999' } },
+        cyberpunk: { body: { backgroundColor: '#0d0d0d', color: '#ff00ff' }, panel: { background: 'linear-gradient(135deg, #0d0d0d, #1a1a1a)', color: '#ff00ff' }, inputs: { background: '#00ffff', color: '#0d0d0d' }, hover: { color: '#00ffff' } },
+        forest: { body: { backgroundColor: '#1b2f2a', color: '#d4e4d9' }, panel: { background: 'linear-gradient(135deg, #1b2f2a, #2e4f47)', color: '#d4e4d9' }, inputs: { background: '#d4e4d9', color: '#1b2f2a' }, hover: { color: '#8bc34a' } },
+        dusk: { body: { backgroundColor: '#3e3e5e', color: '#b8b8d1' }, panel: { background: 'linear-gradient(135deg, #3e3e5e, #4a4a78)', color: '#b8b8d1' }, inputs: { background: '#b8b8d1', color: '#3e3e5e' }, hover: { color: '#7e7eb8' } },
+        stone: { body: { backgroundColor: '#4a4a4a', color: '#d9d9d9' }, panel: { background: 'linear-gradient(135deg, #4a4a4a, #5e5e5e)', color: '#d9d9d9' }, inputs: { background: '#d9d9d9', color: '#4a4a4a' }, hover: { color: '#a8a8a8' } },
+        ocean: { body: { backgroundColor: '#1e3d59', color: '#f5f6eb' }, panel: { background: 'linear-gradient(135deg, #1e3d59, #2a5778)', color: '#f5f6eb' }, inputs: { background: '#f5f6eb', color: '#1e3d59' }, hover: { color: '#ff9f1c' } },
+        sunset: { body: { backgroundColor: '#ff6f61', color: '#2d1b4e' }, panel: { background: 'linear-gradient(135deg, #ff6f61, #ff8c94)', color: '#2d1b4e' }, inputs: { background: '#2d1b4e', color: '#ff6f61' }, hover: { color: '#ffd700' } },
+        emerald: { body: { backgroundColor: '#2e7d32', color: '#f1f8e9' }, panel: { background: 'linear-gradient(135deg, #2e7d32, #388e3c)', color: '#f1f8e9' }, inputs: { background: '#f1f8e9', color: '#2e7d32' }, hover: { color: '#ffb300' } },
+        vintage: { body: { backgroundColor: '#8d5524', color: '#f4e8c1' }, panel: { background: 'linear-gradient(135deg, #8d5524, #a66d3b)', color: '#f4e8c1' }, inputs: { background: '#f4e8c1', color: '#8d5524' }, hover: { color: '#d4a017' } },
+        arctic: { body: { backgroundColor: '#d0e8f2', color: '#2a3d66' }, panel: { background: 'linear-gradient(135deg, #d0e8f2, #b8d8e8)', color: '#2a3d66' }, inputs: { background: '#2a3d66', color: '#d0e8f2' }, hover: { color: '#ff6b6b' } }
     };
 
-    // Fallback barcode map in case of fetch failure
    const fallbackBarcodeMap = {
     ']C17460304025002': '2100100137359', // arawak 180
     ']C17460309025002': '2100100137342',
@@ -159,13 +162,17 @@
     }
 
     function applyTheme() {
-        const selectedTheme = themes[config.theme] || themes['default'];
-        if (config.backgroundEnabled) { // Check if background is enabled
-            document.body.style.backgroundColor = selectedTheme.backgroundColor;
-            document.body.style.color = selectedTheme.color;
-            document.querySelectorAll('button, a').forEach(el => {
-                el.style.color = selectedTheme.accent;
-            });
+        const selectedTheme = themes[config.theme] || themes['light'];
+        
+        // Применяем цвета текста и hover всегда
+        document.body.style.color = selectedTheme.body.color;
+        document.querySelectorAll('button, a').forEach(el => {
+            el.style.color = selectedTheme.hover.color;
+        });
+
+        // Применяем фон только если backgroundEnabled включен
+        if (config.backgroundEnabled) {
+            document.body.style.backgroundColor = selectedTheme.body.backgroundColor;
             if (config.backgroundImageUrl) {
                 document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
                 document.body.style.backgroundSize = 'cover';
@@ -175,20 +182,27 @@
         } else {
             document.body.style.backgroundColor = '';
             document.body.style.backgroundImage = 'none';
-            document.body.style.color = '';
-            document.querySelectorAll('button, a').forEach(el => {
-                el.style.color = '';
-            });
         }
+
+        // Применяем стили панели и инпутов
+        const panel = document.querySelector('.settings-panel');
+        if (panel) {
+            panel.style.background = selectedTheme.panel.background;
+            panel.style.color = selectedTheme.panel.color;
+        }
+
+        document.querySelectorAll('input, select').forEach(el => {
+            el.style.background = selectedTheme.inputs.background;
+            el.style.color = selectedTheme.inputs.color;
+        });
     }
 
     function createSettingsPanel() {
         const panel = document.createElement('div');
+        panel.className = 'settings-panel';
         panel.style.position = 'fixed';
         panel.style.top = '20px';
         panel.style.left = '20px';
-        panel.style.background = 'linear-gradient(145deg, #1e272e, #2f3640)';
-        panel.style.color = '#dfe6e9';
         panel.style.padding = '30px';
         panel.style.borderRadius = '15px';
         panel.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.05)';
@@ -210,8 +224,6 @@
         title.style.fontWeight = '700';
         title.style.textTransform = 'uppercase';
         title.style.letterSpacing = '2px';
-        title.style.color = '#00cec9';
-        title.style.textShadow = '0 2px 4px rgba(0, 206, 201, 0.3)';
         panel.appendChild(title);
 
         function styleInput(input) {
@@ -220,19 +232,15 @@
             input.style.margin = '8px 0 20px 0';
             input.style.border = 'none';
             input.style.borderRadius = '8px';
-            input.style.background = 'rgba(255, 255, 255, 0.08)';
-            input.style.color = '#dfe6e9';
             input.style.fontSize = '15px';
             input.style.boxSizing = 'border-box';
             input.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
             input.style.transition = 'all 0.3s ease';
             input.placeholder = input.placeholder;
             input.addEventListener('focus', () => {
-                input.style.background = 'rgba(255, 255, 255, 0.15)';
-                input.style.boxShadow = '0 0 10px rgba(0, 206, 201, 0.5)';
+                input.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
             });
             input.addEventListener('blur', () => {
-                input.style.background = 'rgba(255, 255, 255, 0.08)';
                 input.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
             });
         }
@@ -269,11 +277,9 @@
             wrapper.style.margin = '15px 0';
             wrapper.style.padding = '8px';
             wrapper.style.borderRadius = '6px';
-            wrapper.style.background = 'rgba(255, 255, 255, 0.05)';
             wrapper.style.transition = 'background 0.3s ease';
 
             checkbox.style.marginRight = '12px';
-            checkbox.style.accentColor = '#00cec9';
             checkbox.style.transform = 'scale(1.3)';
             checkbox.style.cursor = 'pointer';
 
@@ -310,7 +316,7 @@
         });
         panel.appendChild(styleCheckboxWrapper(videoBgCheckbox, 'Enable Video Background'));
 
-        const backgroundCheckbox = document.createElement('input'); // New background toggle
+        const backgroundCheckbox = document.createElement('input');
         backgroundCheckbox.type = 'checkbox';
         backgroundCheckbox.checked = config.backgroundEnabled;
         backgroundCheckbox.addEventListener('change', () => {
@@ -327,32 +333,12 @@
         panel.appendChild(mouseButtonLabel);
 
         const mouseButtonSelect = document.createElement('select');
-        mouseButtonSelect.style.width = '100%';
-        mouseButtonSelect.style.padding = '10px 15px';
-        mouseButtonSelect.style.margin = '0 0 20px 0';
-        mouseButtonSelect.style.border = 'none';
-        mouseButtonSelect.style.borderRadius = '8px';
-        mouseButtonSelect.style.background = 'rgba(255, 255, 255, 0.08)';
-        mouseButtonSelect.style.color = '#dfe6e9';
-        mouseButtonSelect.style.fontSize = '15px';
-        mouseButtonSelect.style.boxSizing = 'border-box';
-        mouseButtonSelect.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
-        mouseButtonSelect.style.transition = 'all 0.3s ease';
-        mouseButtonSelect.addEventListener('focus', () => {
-            mouseButtonSelect.style.background = 'rgba(255, 255, 255, 0.15)';
-            mouseButtonSelect.style.boxShadow = '0 0 10px rgba(0, 206, 201, 0.5)';
-        });
-        mouseButtonSelect.addEventListener('blur', () => {
-            mouseButtonSelect.style.background = 'rgba(255, 255, 255, 0.08)';
-            mouseButtonSelect.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
-        });
-
+        styleInput(mouseButtonSelect);
         const mouseOptions = [
             { value: 0, text: 'Left Button' },
             { value: 1, text: 'Middle Button' },
             { value: 2, text: 'Right Button' }
         ];
-
         mouseOptions.forEach(opt => {
             const option = document.createElement('option');
             option.value = opt.value;
@@ -360,7 +346,6 @@
             if (opt.value === config.mouseButton) option.selected = true;
             mouseButtonSelect.appendChild(option);
         });
-
         mouseButtonSelect.addEventListener('change', () => {
             config.mouseButton = parseInt(mouseButtonSelect.value, 10);
             saveSettings();
@@ -374,41 +359,24 @@
         panel.appendChild(themeLabel);
 
         const themeSelect = document.createElement('select');
-        themeSelect.style.width = '100%';
-        themeSelect.style.padding = '10px 15px';
-        themeSelect.style.margin = '0 0 20px 0';
-        themeSelect.style.border = 'none';
-        themeSelect.style.borderRadius = '8px';
-        themeSelect.style.background = 'rgba(255, 255, 255, 0.08)';
-        themeSelect.style.color = '#dfe6e9';
-        themeSelect.style.fontSize = '15px';
-        themeSelect.style.boxSizing = 'border-box';
-        themeSelect.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
-        themeSelect.style.transition = 'all 0.3s ease';
-        themeSelect.addEventListener('focus', () => {
-            themeSelect.style.background = 'rgba(255, 255, 255, 0.15)';
-            themeSelect.style.boxShadow = '0 0 10px rgba(0, 206, 201, 0.5)';
-        });
-        themeSelect.addEventListener('blur', () => {
-            themeSelect.style.background = 'rgba(255, 255, 255, 0.08)';
-            themeSelect.style.boxShadow = 'inset 0 2px 4px rgba(0, 0, 0, 0.2)';
-        });
-
+        styleInput(themeSelect);
         const themeOptions = [
-            { value: 'default', text: 'Default' },
-            { value: 'twilight', text: 'Twilight' },
-            { value: 'sandstone', text: 'Sandstone' },
-            { value: 'moss', text: 'Moss' },
+            { value: 'dark', text: 'Dark' },
+            { value: 'light', text: 'Light' },
+            { value: 'neon', text: 'Neon' },
+            { value: 'pastel', text: 'Pastel' },
+            { value: 'solarized', text: 'Solarized' },
+            { value: 'monochrome', text: 'Monochrome' },
+            { value: 'cyberpunk', text: 'Cyberpunk' },
+            { value: 'forest', text: 'Forest' },
             { value: 'dusk', text: 'Dusk' },
-            { value: 'pebble', text: 'Pebble' },
-            { value: 'clay', text: 'Clay' },
-            { value: 'haze', text: 'Haze' },
-            { value: 'olive', text: 'Olive' },
-            { value: 'mist', text: 'Mist' },
-            { value: 'linen', text: 'Linen' },
-            { value: 'sage', text: 'Sage' }
+            { value: 'stone', text: 'Stone' },
+            { value: 'ocean', text: 'Ocean' },
+            { value: 'sunset', text: 'Sunset' },
+            { value: 'emerald', text: 'Emerald' },
+            { value: 'vintage', text: 'Vintage' },
+            { value: 'arctic', text: 'Arctic' }
         ];
-
         themeOptions.forEach(opt => {
             const option = document.createElement('option');
             option.value = opt.value;
@@ -416,7 +384,6 @@
             if (opt.value === config.theme) option.selected = true;
             themeSelect.appendChild(option);
         });
-
         themeSelect.addEventListener('change', () => {
             config.theme = themeSelect.value;
             saveSettings();
@@ -428,7 +395,7 @@
         toggleButton.textContent = 'Rulik Mod';
         toggleButton.style.position = 'fixed';
         toggleButton.style.bottom = '20px';
-        toggleButton.style.left = '20px'; // Moved to bottom left
+        toggleButton.style.left = '20px';
         toggleButton.style.zIndex = '9999';
         toggleButton.style.padding = '12px 25px';
         toggleButton.style.background = 'linear-gradient(145deg, #00cec9, #0984e3)';
