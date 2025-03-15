@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Шось тут таке
 // @author       Щоденник
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -16,6 +16,7 @@
         videoUrl: 'https://cdn.pixabay.com/video/2020/04/09/35573-407595474_large.mp4',
         snowEnabled: false,
         videoBackgroundEnabled: true,
+        backgroundEnabled: true, // New setting for background toggle
         snowflakeCount: 100,
         snowflakeColor: 'white',
         buttonSelector: '.form-block-buttons-submit',
@@ -40,7 +41,7 @@
     };
 
     // Fallback barcode map in case of fetch failure
-    const fallbackBarcodeMap = {
+   const fallbackBarcodeMap = {
     ']C17460304025002': '2100100137359', // arawak 180
     ']C17460309025002': '2100100137342',
     ']C17460313025002': '2100100137335',
@@ -121,23 +122,20 @@
     '8991475068232': '2100100107567'
 };
 
-    let barcodeMap = fallbackBarcodeMap; // Default to fallback
+    let barcodeMap = fallbackBarcodeMap;
 
-    // Fetch barcode map from GitHub
     fetch('https://raw.githubusercontent.com/1stMaverick/ProgramaFixer/refs/heads/main/barcodes.json')
         .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
+            if (!response.ok) throw new Error('Network response was not ok');
             return response.json();
         })
         .then(data => {
-            barcodeMap = data; // Update barcodeMap with fetched data
+            barcodeMap = data;
             console.log('Barcode map successfully loaded from GitHub:', barcodeMap);
         })
         .catch(error => {
             console.error('Failed to load barcode map from GitHub, using fallback:', error);
-            barcodeMap = fallbackBarcodeMap; // Ensure fallback is used on error
+            barcodeMap = fallbackBarcodeMap;
         });
 
     document.addEventListener('dblclick', function(event) {
@@ -162,14 +160,25 @@
 
     function applyTheme() {
         const selectedTheme = themes[config.theme] || themes['default'];
-        document.body.style.backgroundColor = selectedTheme.backgroundColor;
-        document.body.style.color = selectedTheme.color;
-        document.querySelectorAll('button, a').forEach(el => {
-            el.style.color = selectedTheme.accent;
-        });
-        if (config.backgroundImageUrl) {
-            document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
-            document.body.style.backgroundSize = 'cover';
+        if (config.backgroundEnabled) { // Check if background is enabled
+            document.body.style.backgroundColor = selectedTheme.backgroundColor;
+            document.body.style.color = selectedTheme.color;
+            document.querySelectorAll('button, a').forEach(el => {
+                el.style.color = selectedTheme.accent;
+            });
+            if (config.backgroundImageUrl) {
+                document.body.style.backgroundImage = `url("${config.backgroundImageUrl}")`;
+                document.body.style.backgroundSize = 'cover';
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+        } else {
+            document.body.style.backgroundColor = '';
+            document.body.style.backgroundImage = 'none';
+            document.body.style.color = '';
+            document.querySelectorAll('button, a').forEach(el => {
+                el.style.color = '';
+            });
         }
     }
 
@@ -301,6 +310,16 @@
         });
         panel.appendChild(styleCheckboxWrapper(videoBgCheckbox, 'Enable Video Background'));
 
+        const backgroundCheckbox = document.createElement('input'); // New background toggle
+        backgroundCheckbox.type = 'checkbox';
+        backgroundCheckbox.checked = config.backgroundEnabled;
+        backgroundCheckbox.addEventListener('change', () => {
+            config.backgroundEnabled = backgroundCheckbox.checked;
+            saveSettings();
+            applyTheme();
+        });
+        panel.appendChild(styleCheckboxWrapper(backgroundCheckbox, 'Enable Background'));
+
         const mouseButtonLabel = document.createElement('label');
         mouseButtonLabel.textContent = 'Mouse Button for Copy Action:';
         mouseButtonLabel.style.display = 'block';
@@ -409,7 +428,7 @@
         toggleButton.textContent = 'Rulik Mod';
         toggleButton.style.position = 'fixed';
         toggleButton.style.bottom = '20px';
-        toggleButton.style.right = '20px';
+        toggleButton.style.left = '20px'; // Moved to bottom left
         toggleButton.style.zIndex = '9999';
         toggleButton.style.padding = '12px 25px';
         toggleButton.style.background = 'linear-gradient(145deg, #00cec9, #0984e3)';
