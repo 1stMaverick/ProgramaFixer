@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  Шось тут таке
 // @author       Щоденник
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -90,7 +90,7 @@
 
     function applyTheme() {
         const selectedTheme = themes[config.theme] || themes['default'];
-        
+
         // Применяем цвета текста и hover
         document.body.style.color = selectedTheme.body.color;
         document.querySelectorAll('button, a').forEach(el => {
@@ -510,34 +510,54 @@
     observerReplace.observe(document.body, { childList: true, subtree: true });
     setInterval(addEventListenerWithDelay, 2000);
     document.addEventListener('copy', removeBracketsAndNumbers);
+//barcode
+function normalizeBarcode(str) {
+  let result = str.replace(/^[ъ\]\ї]+/, '').trim();
+  if (result && (result.charAt(0) === 'C' || result.charAt(0) === 'С')) {
+    result = result.slice(1);
+  }
+  return result;
+}
 
-    function replaceInputValue(event) {
-        let inputValue = event.target.value.trim();
-        const correctBarcode = barcodeMap[inputValue];
-        if (correctBarcode) {
-            event.target.value = correctBarcode;
-            const inputEvent = new Event('input', { bubbles: true, cancelable: true });
-            event.target.dispatchEvent(inputEvent);
-            const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
-            event.target.dispatchEvent(enterEvent);
-        }
-    }
+function getCorrectBarcode(input) {
+  if (barcodeMap[input]) {
+    return barcodeMap[input];
+  }
 
-    function replaceAndClearBarcode() {
-        const barcodeInput = document.querySelector('#barcode.barcode-input');
-        if (barcodeInput && barcodeInput.value) {
-            const value = barcodeInput.value.trim();
-            const correctBarcode = barcodeMap[value];
-            if (correctBarcode) {
-                barcodeInput.value = correctBarcode;
-                const inputEvent = new Event('input', { bubbles: true, cancelable: true });
-                barcodeInput.dispatchEvent(inputEvent);
-                const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' });
-                barcodeInput.dispatchEvent(enterEvent);
-            }
-            setTimeout(() => barcodeInput.value = '', 5);
-        }
+    const normInput = normalizeBarcode(input);
+
+  for (const key in barcodeMap) {
+    if (normalizeBarcode(key) === normInput) {
+      return barcodeMap[key];
     }
+  }
+
+  return undefined;
+}
+
+function replaceInputValue(event) {
+  let inputValue = event.target.value.trim();
+  const correctBarcode = getCorrectBarcode(inputValue);
+  if (correctBarcode) {
+    event.target.value = correctBarcode;
+    event.target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    event.target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }));
+  }
+}
+
+function replaceAndClearBarcode() {
+  const barcodeInput = document.querySelector('#barcode.barcode-input');
+  if (barcodeInput && barcodeInput.value) {
+    let inputValue = barcodeInput.value.trim();
+    const correctBarcode = getCorrectBarcode(inputValue);
+    if (correctBarcode) {
+      barcodeInput.value = correctBarcode;
+      barcodeInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      barcodeInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }));
+    }
+    setTimeout(() => { barcodeInput.value = ''; }, 5);
+  }
+}
 
     const observerClearBarcode = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
