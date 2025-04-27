@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rulik Mod 2.0
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  Шось тут таке
 // @author       Щоденник
 // @match        *://disgusting.ivano-frankivsk.ua/*
@@ -564,6 +564,122 @@ function replaceAndClearBarcode() {
             if (mutation.type === 'childList') replaceAndClearBarcode();
         });
     });
+ // Функция для обработки таблицы
+    function processTable() {
+        // Проверяем наличие таблицы
+        const tableContainer = document.querySelector('.form-shipment-store-table-right-div');
+        if (!tableContainer) {
+            console.log('[AddressDeliveryScript] Контейнер таблицы не найден');
+            return;
+        }
+
+        const tbody = tableContainer.querySelector('tbody');
+        if (!tbody) {
+            console.log('[AddressDeliveryScript] Элемент tbody не найден');
+            return;
+        }
+
+        // Находим все строки таблицы
+        const rows = tbody.querySelectorAll('tr');
+        console.log('[AddressDeliveryScript] Найдено строк:', rows.length);
+
+        if (rows.length === 0) {
+            console.log('[AddressDeliveryScript] Строки в таблице отсутствуют');
+            return;
+        }
+
+        rows.forEach((row, index) => {
+            // Находим ячейку с классом form-shipment-store-right-table-tbody-td-8
+            const cellWithName = row.querySelector('.form-shipment-store-right-table-tbody-td-8');
+            if (!cellWithName) {
+                console.log(`[AddressDeliveryScript] Ячейка form-shipment-store-right-table-tbody-td-8 не найдена в строке ${index + 1}`);
+                return;
+            }
+
+            // Проверяем наличие текста "Адресна доставка"
+            if (cellWithName.textContent.trim().includes('Адресна доставка') || cellWithName.textContent.trim().includes('Доставка до метро') ) {
+                console.log(`[AddressDeliveryScript] Найдена строка ${index + 1} с "Адресна доставка || Доставка до метро"`);
+
+                // Находим input в третьей колонке
+                const inputField = row.querySelector('.form-shipment-store-right-table-tbody-td-2-number');
+                if (inputField) {
+                    console.log(`[AddressDeliveryScript] Input найден в строке ${index + 1}, устанавливаем значение 3`);
+
+                    // Устанавливаем значение
+                    inputField.value = '1';
+
+                    // Имитируем пользовательский ввод
+                    try {
+                        // Создаём событие input
+                        const inputEvent = new Event('input', { bubbles: true });
+                        inputField.dispatchEvent(inputEvent);
+                        console.log(`[AddressDeliveryScript] Событие input отправлено для строки ${index + 1}`);
+
+                        // Создаём событие change
+                        const changeEvent = new Event('change', { bubbles: true });
+                        inputField.dispatchEvent(changeEvent);
+                        console.log(`[AddressDeliveryScript] Событие change отправлено для строки ${index + 1}`);
+
+                        // Дополнительно отправляем keyup для большей совместимости
+                        const keyupEvent = new KeyboardEvent('keyup', { bubbles: true });
+                        inputField.dispatchEvent(keyupEvent);
+                        console.log(`[AddressDeliveryScript] Событие keyup отправлено для строки ${index + 1}`);
+                    } catch (e) {
+                        console.error(`[AddressDeliveryScript] Ошибка при отправке событий в строке ${index + 1}:`, e);
+                    }
+                } else {
+                    console.log(`[AddressDeliveryScript] Input с классом form-shipment-store-right-table-tbody-td-2-number не найден в строке ${index + 1}`);
+                }
+            }
+        });
+    }
+
+    // Функция для повторного запуска обработки с задержкой
+    function runWithRetry() {
+        console.log('[AddressDeliveryScript] Запуск обработки таблицы');
+        processTable();
+
+        // Повторяем несколько раз с интервалом для надёжности
+        const maxAttempts = 5;
+        let attempt = 0;
+        const interval = setInterval(() => {
+            if (attempt >= maxAttempts) {
+                clearInterval(interval);
+                console.log('[AddressDeliveryScript] Достигнуто максимальное количество попыток');
+                return;
+            }
+            console.log(`[AddressDeliveryScript] Попытка ${attempt + 1} обработки таблицы`);
+            processTable();
+            attempt++;
+        }, 10000); // Интервал 10 секунды
+    }
+
+    // Запускаем обработку после полной загрузки страницы
+    window.addEventListener('load', () => {
+        console.log('[AddressDeliveryScript] Страница загружена, начинаем обработку');
+        runWithRetry();
+    });
+
+    // Добавляем наблюдатель за изменениями в DOM
+    const observerAutoPick = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length || mutation.removedNodes.length) {
+                console.log('[AddressDeliveryScript] Обнаружены изменения в DOM, повторная обработка');
+                processTable();
+                break;
+            }
+        }
+    });
+
+    // Наблюдаем за изменениями в body
+    observerAutoPick.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Запускаем обработку сразу для случаев, когда страница уже загружена
+    console.log('[AddressDeliveryScript] Первичный запуск скрипта');
+    runWithRetry();
 
     observerClearBarcode.observe(document.body, { childList: true, subtree: true });
     document.body.addEventListener('input', replaceInputValue);
