@@ -1,0 +1,1388 @@
+// ==UserScript==
+// @name         Rulik Mod 3.0
+// @namespace    http://tampermonkey.net/
+// @version      3.0
+// @description  Слава неграм
+// @author       Щоденник
+// @match        *://disgusting.ivano-frankivsk.ua/*
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // ── Єдиний конфіг (RulikMod_settings) ────────────────────────────────────────
+    const DEFAULTS = {
+        // Вигляд
+        videoUrl:              'https://cdn.pixabay.com/video/2020/04/09/35573-407595474_large.mp4',
+        snowEnabled:           false,
+        videoBackgroundEnabled:true,
+        backgroundEnabled:     false,
+        snowflakeCount:        100,
+        snowflakeColor:        'white',
+        backgroundImageUrl:    '',
+        mouseButton:           1,
+        theme:                 'off',
+        // Звук
+        soundNormalUrl:        '',
+        soundHighUrl:          '/alarm.mp3',
+        minSoundCount:         999,
+        volume:                0,
+        // Фільтрація
+        enableFilter:          false,
+        removeCyrillicBrackets: false,
+        stopWords:             '',
+        stopWordsUrl:          '',
+        // Мітка кальяну
+        hookahWords:           'кальян',
+        flaskWords:            'колба',
+        hookahTestWord:        ''
+    };
+
+    const STORAGE_KEY = 'RulikMod_settings';
+
+    let config = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
+    const saveConfig = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+
+    // Хелпери доступу (для зручності читання коду)
+    const get  = k => config[k];
+    const set  = (k, v) => { config[k] = v; saveConfig(); };
+
+    // ── Теми ───────────────────────────────────────────────────────────────────
+    // Кожна тема: { bg, text, nav, navText, accent, table, tableText, panel, panelText }
+    // bg/text — сторінка; nav/navText — навбар; accent — кнопки/посилання;
+    // table/tableText — рядки таблиці; panel/panelText — панель Rulik Mod
+    const themes = {
+        off: null, // скидає всі стилі
+        default: {
+            bg: '#1e272e', text: '#dfe6e9',
+            nav: '#16202a', navText: '#dfe6e9',
+            accent: '#00cec9',
+            table: '#253340', tableText: '#dfe6e9',
+            panel: 'linear-gradient(145deg,#1e272e,#2f3640)', panelText: '#dfe6e9'
+        },
+        dark: {
+            bg: '#1a1a2e', text: '#e0e0e0',
+            nav: '#16213e', navText: '#a8d8ea',
+            accent: '#3498db',
+            table: '#0f3460', tableText: '#e0e0e0',
+            panel: 'linear-gradient(135deg,#16213e,#0f3460)', panelText: '#e0e0e0'
+        },
+        light: {
+            bg: '#f0f4f8', text: '#2d3748',
+            nav: '#2d3748', navText: '#f0f4f8',
+            accent: '#e53e3e',
+            table: '#ffffff', tableText: '#2d3748',
+            panel: 'linear-gradient(135deg,#e2e8f0,#cbd5e0)', panelText: '#2d3748'
+        },
+        neon: {
+            bg: '#0d0d0d', text: '#00ffcc',
+            nav: '#111111', navText: '#00ffcc',
+            accent: '#ff00ff',
+            table: '#1a1a1a', tableText: '#00ffcc',
+            panel: 'linear-gradient(135deg,#1a1a1a,#0d0d0d)', panelText: '#00ffcc'
+        },
+        cyberpunk: {
+            bg: '#0d0208', text: '#ff2d78',
+            nav: '#140011', navText: '#ffe600',
+            accent: '#ffe600',
+            table: '#1a0015', tableText: '#ff2d78',
+            panel: 'linear-gradient(135deg,#0d0208,#1a0015)', panelText: '#ff2d78'
+        },
+        ocean: {
+            bg: '#0a2342', text: '#cde8f0',
+            nav: '#06182e', navText: '#7ecef4',
+            accent: '#ff9f1c',
+            table: '#0d2d4e', tableText: '#cde8f0',
+            panel: 'linear-gradient(135deg,#0a2342,#1e3d59)', panelText: '#cde8f0'
+        },
+        forest: {
+            bg: '#1b2f2a', text: '#c8e6c9',
+            nav: '#122420', navText: '#a5d6a7',
+            accent: '#69f0ae',
+            table: '#1e3530', tableText: '#c8e6c9',
+            panel: 'linear-gradient(135deg,#1b2f2a,#2e4f47)', panelText: '#c8e6c9'
+        },
+        sunset: {
+            bg: '#1a0533', text: '#ffd6e0',
+            nav: '#2d0b5e', navText: '#ffb3c6',
+            accent: '#ff6b6b',
+            table: '#250744', tableText: '#ffd6e0',
+            panel: 'linear-gradient(135deg,#2d0b5e,#ff6b6b)', panelText: '#ffd6e0'
+        },
+        solarized: {
+            bg: '#002b36', text: '#839496',
+            nav: '#073642', navText: '#93a1a1',
+            accent: '#b58900',
+            table: '#073642', tableText: '#839496',
+            panel: 'linear-gradient(135deg,#002b36,#073642)', panelText: '#839496'
+        },
+        monochrome: {
+            bg: '#1c1c1c', text: '#e0e0e0',
+            nav: '#121212', navText: '#bdbdbd',
+            accent: '#9e9e9e',
+            table: '#262626', tableText: '#e0e0e0',
+            panel: 'linear-gradient(135deg,#1c1c1c,#333333)', panelText: '#e0e0e0'
+        },
+        pastel: {
+            bg: '#fdf6ec', text: '#5c4a6e',
+            nav: '#e8d5f0', navText: '#5c4a6e',
+            accent: '#ff8a80',
+            table: '#fff8f0', tableText: '#5c4a6e',
+            panel: 'linear-gradient(135deg,#f3e0ff,#fde8f0)', panelText: '#5c4a6e'
+        },
+        emerald: {
+            bg: '#1b3a2d', text: '#e8f5e9',
+            nav: '#0d2b1e', navText: '#a5d6a7',
+            accent: '#69f0ae',
+            table: '#1e4433', tableText: '#e8f5e9',
+            panel: 'linear-gradient(135deg,#1b3a2d,#2e7d32)', panelText: '#e8f5e9'
+        },
+        vintage: {
+            bg: '#2c1a0e', text: '#f4e8c1',
+            nav: '#1a0e06', navText: '#d4a017',
+            accent: '#d4a017',
+            table: '#3d2514', tableText: '#f4e8c1',
+            panel: 'linear-gradient(135deg,#2c1a0e,#8d5524)', panelText: '#f4e8c1'
+        },
+        dusk: {
+            bg: '#2d2b55', text: '#cfc9ff',
+            nav: '#1e1c3e', navText: '#b0a8ff',
+            accent: '#9c88ff',
+            table: '#332f66', tableText: '#cfc9ff',
+            panel: 'linear-gradient(135deg,#2d2b55,#4a4870)', panelText: '#cfc9ff'
+        },
+        stone: {
+            bg: '#292929', text: '#e0e0e0',
+            nav: '#1a1a1a', navText: '#bdbdbd',
+            accent: '#a0a0a0',
+            table: '#303030', tableText: '#e0e0e0',
+            panel: 'linear-gradient(135deg,#292929,#404040)', panelText: '#e0e0e0'
+        },
+        arctic: {
+            bg: '#e8f4fd', text: '#1a2f4a',
+            nav: '#b8d8f0', navText: '#1a2f4a',
+            accent: '#1565c0',
+            table: '#f0f8ff', tableText: '#1a2f4a',
+            panel: 'linear-gradient(135deg,#d0e8f2,#b8d8e8)', panelText: '#1a2f4a'
+        }
+    };
+
+    // Єдиний <style> тег — завжди перезаписуємо, не накопичуємо
+    let themeStyleEl = null;
+
+    function applyTheme() {
+        if (!themeStyleEl) {
+            themeStyleEl = document.createElement('style');
+            themeStyleEl.id = 'rulik-theme';
+            document.head.appendChild(themeStyleEl);
+        }
+
+        const name = get('theme');
+        const t = themes[name];
+
+        // Скидаємо фон body окремо (бо може бути відео або картинка)
+        if (!get('backgroundEnabled') || !t) {
+            document.body.style.backgroundColor = '';
+            document.body.style.backgroundImage = 'none';
+        }
+
+        if (!t) {
+            // theme = off — прибираємо всі наші стилі
+            themeStyleEl.textContent = '';
+            return;
+        }
+
+        // Фон сторінки
+        if (get('backgroundEnabled')) {
+            if (get('backgroundImageUrl')) {
+                document.body.style.backgroundImage = `url("${get('backgroundImageUrl')}")`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundRepeat = 'no-repeat';
+                document.body.style.backgroundAttachment = 'fixed';
+                document.body.style.backgroundColor = '';
+            } else {
+                document.body.style.backgroundColor = t.bg;
+                document.body.style.backgroundImage = 'none';
+            }
+        }
+
+        // Панель налаштувань
+        const panel = document.querySelector('.settings-panel');
+        if (panel) { panel.style.background = t.panel; panel.style.color = t.panelText; }
+
+        // CSS з !important — перебиває Vue inline styles та Tailwind
+        themeStyleEl.textContent = `
+            /* Rulik Mod Theme: ${name} */
+
+            /* Фон сторінки */
+            body, #app { background-color: ${t.bg} !important; }
+
+            /* Навбар */
+            nav.menu-items {
+                background-color: ${t.nav} !important;
+                background: ${t.nav} !important;
+            }
+            .nav-menu-btn, .nav-menu-btn-span,
+            nav.menu-items a, nav.menu-items button, nav.menu-items span {
+                color: ${t.navText} !important;
+            }
+            nav.menu-items a:hover, nav.menu-items button:hover {
+                color: ${t.accent} !important;
+                background-color: rgba(255,255,255,0.08) !important;
+            }
+
+            /* Кнопки дії */
+            .base-button:not(.nav-menu-btn):not(.button-red-style) {
+                background-color: ${t.accent}22 !important;
+                color: ${t.accent} !important;
+                border: 1px solid ${t.accent}55 !important;
+            }
+            .base-button:not(.nav-menu-btn):not(.button-red-style):hover {
+                background-color: ${t.accent}44 !important;
+            }
+            .button-grant-style { color: #fff !important; }
+
+            /* Таблиця — фон і текст окремо щоб не зливались */
+            table, .form-shipment-store-table-right-div-table,
+            tr, td, th,
+            .form-shipment-store-right-table-tbody-td-8,
+            .form-shipment-store-right-table-tbody-td-2,
+            .form-shipment-store-right-table-thead-th-8,
+            .form-shipment-store-right-table-thead-th-2 {
+                background-color: ${t.table} !important;
+                color: ${t.tableText} !important;
+            }
+            tr:nth-child(even) td { filter: brightness(0.93); }
+
+            /* Заголовок */
+            h1.form-title { color: ${t.text} !important; }
+
+            /* Ліва панель форми */
+            .form-shipment-store-table-left,
+            .form-shipment-store-table-left-label,
+            .form-shipment-store-table-left-row-control {
+                color: ${t.text} !important;
+                background-color: transparent !important;
+            }
+
+            /* Блоки-обгортки */
+            .form-wrapper-form-wrapper, .form-shipment-store-table {
+                background-color: ${t.bg} !important;
+            }
+
+            /* Посилання */
+            a:not(.nav-menu-btn):not(.base-button) { color: ${t.accent} !important; }
+
+            /* Не чіпаємо input/select/textarea */
+        `;
+    }
+
+    // ── Відео-фон ──────────────────────────────────────────────────────────────
+    function setupVideoBackground() {
+        if (!get('videoBackgroundEnabled')) return;
+        const v = document.createElement('video');
+        v.src = get('videoUrl'); v.autoplay = v.loop = v.muted = true;
+        Object.assign(v.style, { position:'fixed', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', zIndex:'-1' });
+        document.body.appendChild(v);
+    }
+    function removeVideoBackground() {
+        document.querySelector('video[style*="z-index"]')?.remove();
+    }
+
+    // ── Сніг ───────────────────────────────────────────────────────────────────
+    function createSnowfall() {
+        if (!get('snowEnabled')) return;
+        const style = document.createElement('style');
+        style.textContent = '@keyframes fall{to{transform:translateY(100vh)}}';
+        document.head.appendChild(style);
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < get('snowflakeCount'); i++) {
+            const f = document.createElement('div');
+            f.className = 'snowflake';
+            Object.assign(f.style, {
+                position:'fixed', top:`${Math.random()*100}vh`, left:`${Math.random()*100}vw`,
+                width:'10px', height:'10px', backgroundColor: get('snowflakeColor'),
+                borderRadius:'50%', opacity: Math.random(), zIndex:'9998',
+                animation:`fall ${Math.random()*5+5}s linear infinite`
+            });
+            frag.appendChild(f);
+        }
+        document.body.appendChild(frag);
+    }
+    const removeSnowfall = () => document.querySelectorAll('.snowflake').forEach(el => el.remove());
+
+    // ── Аудіо ──────────────────────────────────────────────────────────────────
+    function makeAudio(id) {
+        return document.getElementById(id) || (() => {
+            const a = Object.assign(document.createElement('audio'), { id, preload: 'auto' });
+            document.body.appendChild(a); return a;
+        })();
+    }
+    const audioNormal = makeAudio('rulik_audio_normal');
+    const audioHigh   = makeAudio('rulik_audio_high');
+    let lastPlayedValue = 0;
+
+    function applyAudioSettings() {
+        const vol = (parseInt(get('volume'), 10) || 80) / 100;
+        audioNormal.src = get('soundNormalUrl') || '';
+        audioHigh.src   = get('soundHighUrl')   || '/alarm.mp3';
+        audioNormal.volume = audioHigh.volume = vol;
+    }
+
+    function checkWaitingButtons() {
+        const min = parseInt(get('minSoundCount'), 10);
+        if (isNaN(min) || min <= 0) return;
+        let max = 0;
+        document.querySelectorAll('button.base-button.index-tabs-block-item span').forEach(s => {
+            const n = parseInt(s.textContent.replace(/\D/g, ''), 10);
+            if (!isNaN(n) && n > max) max = n;
+        });
+        if (max >= min && max !== lastPlayedValue) {
+            lastPlayedValue = max;
+            const audio = (max > 9 && audioNormal.src) ? audioNormal : audioHigh;
+            audio.currentTime = 0; audio.play().catch(() => {});
+        } else if (max < min) {
+            lastPlayedValue = 0;
+        }
+    }
+
+    // ── Стоп-слова ─────────────────────────────────────────────────────────────
+    function parseRemoteWords(text) {
+        try {
+            const p = JSON.parse(text);
+            return Array.isArray(p) ? p.join(', ') : text;
+        } catch { return text.replace(/\n/g, ','); }
+    }
+
+    function loadRemoteStopWords() {
+        const url = get('stopWordsUrl').trim();
+        if (!url) return;
+        fetch(url)
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+            .then(text => { set('stopWords', parseRemoteWords(text).trim()); })
+            .catch(err => console.warn('[RulikMod] Стоп-слова:', err));
+    }
+
+    // Видаляє дужки якщо вміст — тільки кирилиця і пробіли (переклад назви)
+    // Залишає: (50 гр), (30000 Затяжок), (Limited), (10) — залишок в кінці
+    const RX_CYRILLIC_BRACKETS = /\(\s*[а-яґєіїА-ЯҐЄІЇ''\s]+\s*\)/gu;
+
+    function removeCyrillicBrackets(text) {
+        // Зберігаємо залишок в кінці: (число) або (число/число)
+        const remainderMatch = text.match(/\(\s*\d+[\d/]*\s*\)\s*$/);
+        const remainder = remainderMatch ? remainderMatch[0] : '';
+
+        // Тимчасово прибираємо залишок щоб не зачепити його
+        const withoutRemainder = remainder
+            ? text.slice(0, text.lastIndexOf(remainder))
+            : text;
+
+        const cleaned = withoutRemainder
+            .replace(RX_CYRILLIC_BRACKETS, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
+        return remainder ? `${cleaned} ${remainder.trim()}` : cleaned;
+    }
+
+    function cleanTitles() {
+        if (!get('enableFilter') && !get('removeCyrillicBrackets')) return;
+        const words = get('enableFilter')
+            ? get('stopWords').split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rxs = words.map(w => new RegExp(`(?<!\\p{L})${esc(w)}(?!\\p{L})`, 'giu'));
+        const doBrackets = get('removeCyrillicBrackets');
+        document.querySelectorAll('td.form-shipment-store-right-table-tbody-td-8').forEach(td => {
+            const walker = document.createTreeWalker(td, NodeFilter.SHOW_TEXT);
+            const nodes = []; let n;
+            while ((n = walker.nextNode())) nodes.push(n);
+            nodes.forEach(node => {
+                let t = node.textContent;
+                rxs.forEach(r => { t = t.replace(r, ''); });
+                if (doBrackets) t = removeCyrillicBrackets(t);
+                node.textContent = t.replace(/\s+/g, ' ').trim();
+            });
+        });
+    }
+
+    // ── Розмір шрифту ──────────────────────────────────────────────────────────
+    function resizeFont() {
+        document.querySelectorAll('td.form-shipment-store-right-table-tbody-td-2').forEach(td => {
+            if (td.querySelector('input')) return;
+            const v = parseInt(td.textContent.trim(), 10);
+            td.style.fontSize = (!isNaN(v) && v > 1) ? '32px' : '24px';
+        });
+    }
+
+    // ── Авто-поле "Адресна доставка" ───────────────────────────────────────────
+    function processTable() {
+        document.querySelectorAll('.form-shipment-store-table-right-div tbody tr').forEach(row => {
+            const cell = row.querySelector('.form-shipment-store-right-table-tbody-td-8');
+            if (!cell) return;
+            const text = cell.textContent.trim();
+            if (!text.includes('Адресна доставка') && !text.includes('Доставка до метро')) return;
+            const inp = row.querySelector('.form-shipment-store-right-table-tbody-td-2-number');
+            if (inp && inp.value !== '1') {
+                inp.value = '1';
+                ['input','change'].forEach(ev => inp.dispatchEvent(new Event(ev, { bubbles: true })));
+                inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            }
+        });
+    }
+
+    function runWithRetry(fn, attempts = 5, interval = 10000) {
+        fn(); let i = 0;
+        const id = setInterval(() => { if (i++ >= attempts) clearInterval(id); else fn(); }, interval);
+    }
+
+    // ── Штрихкоди ──────────────────────────────────────────────────────────────
+    const fallbackBarcodeMap = {
+        ']C17460304025002': '2100100137359',
+        ']C10132982940000007': '2100100196424',
+        '8991475068232': '2100100107567'
+    };
+    let barcodeMap = { ...fallbackBarcodeMap };
+
+    // ── JSONBin (спільні дані: штрихкоди + стоп-слова + features) ─────────────
+    const JSONBIN_KEY        = '$2a$10$j5v2Na6Pd3mAwKA4VkjowOrn6O0BIUpNKcgDP/91/xAvQxOp5odIa';
+    const JSONBIN_ACCESS_KEY = '$2a$10$cUsH4vj.bIdmU/GolMINU.po2oELlgn.VORxqmkNc5o6qjyk8Jraq';
+    const JSONBIN_ID   = '6a491b6bda38895dfe2d7112';
+    const JSONBIN_URL  = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+    const JSONBIN_SYNC_KEY = 'RulikMod_lastSync';
+
+    // features — що вмикати/вимикати (читається з JSONBin)
+    let features = {
+        enabled:     true,
+        sound:       true,
+        theme:       true,
+        filter:      true,
+        hookahLabel: true,
+        stats:       true,
+        barcodes:    true,
+        autoField:   true
+    };
+
+    function applyFeatures() {
+        if (!features.enabled) {
+            // Вимикаємо тему
+            if (themeStyleEl) themeStyleEl.textContent = '';
+            // Зупиняємо observer
+            masterObserver.disconnect();
+            // Ховаємо кнопку Rulik Mod якщо є
+            const btn = document.querySelector('button[data-rulik-toggle]');
+            if (btn) btn.style.display = 'none';
+            console.log('[RulikMod] ⛔ Скрипт вимкнено через features.enabled = false');
+        } else {
+            // Відновлюємо якщо раніше був вимкнений
+            masterObserver.observe(document.body, { childList: true, subtree: true });
+            const btn = document.querySelector('button[data-rulik-toggle]');
+            if (btn) btn.style.display = '';
+        }
+    }
+
+    async function syncFromJsonBin(force = false) {
+        if (JSONBIN_ID === 'PLACEHOLDER_BIN_ID') {
+            console.warn('[RulikMod] JSONBin ID не задано — синхронізація пропущена');
+            return;
+        }
+
+        // Перевіряємо чи треба синхронізувати (раз на добу або force)
+        if (!force) {
+            const last = parseInt(localStorage.getItem(JSONBIN_SYNC_KEY) || '0', 10);
+            const now  = Date.now();
+            const noon = (() => {
+                const d = new Date();
+                d.setHours(12, 0, 0, 0);
+                // Якщо вже після 12 — беремо сьогоднішній noon, інакше вчорашній
+                return d.getTime() > now ? d.getTime() - 86400000 : d.getTime();
+            })();
+            if (last >= noon) return; // вже синхронізували після останнього noon
+        }
+
+        try {
+            const r = await fetch(JSONBIN_URL + '/latest', {
+                headers: { 'X-Master-Key': JSONBIN_KEY }
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const data = (await r.json()).record;
+
+            // Оновлюємо штрихкоди
+            if (data.barcodes && typeof data.barcodes === 'object') {
+                barcodeMap = { ...fallbackBarcodeMap, ...data.barcodes };
+                console.log('[RulikMod] ✅ Штрихкоди оновлено з JSONBin:', Object.keys(barcodeMap).length);
+            }
+
+            // Оновлюємо стоп-слова
+            if (Array.isArray(data.stopWords) && data.stopWords.length) {
+                const words = data.stopWords.join(', ');
+                set('stopWords', words);
+                console.log('[RulikMod] ✅ Стоп-слова оновлено з JSONBin:', words);
+            }
+
+            // Оновлюємо features
+            if (data.features && typeof data.features === 'object') {
+                features = Object.assign(features, data.features);
+                applyFeatures();
+                console.log('[RulikMod] ✅ Features оновлено:', features);
+            }
+
+            localStorage.setItem(JSONBIN_SYNC_KEY, Date.now().toString());
+        } catch (err) {
+            console.warn('[RulikMod] ❌ Синхронізація з JSONBin не вдалась:', err.message);
+        }
+    }
+
+    async function saveToJsonBin(data) {
+        if (JSONBIN_ID === 'PLACEHOLDER_BIN_ID') return;
+        try {
+            const r = await fetch(JSONBIN_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': JSONBIN_KEY,
+                    'X-Access-Key': JSONBIN_ACCESS_KEY
+                },
+                body: JSON.stringify(data)
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            console.log('[RulikMod] ✅ Дані збережено в JSONBin');
+            return true;
+        } catch (err) {
+            console.warn('[RulikMod] ❌ Збереження в JSONBin не вдалось:', err.message);
+            return false;
+        }
+    }
+
+    function normalizeBarcode(s) {
+        let r = s.replace(/^[ъ\]\ї]+/, '').trim();
+        if (r && (r[0] === 'C' || r[0] === 'С')) r = r.slice(1);
+        return r;
+    }
+    function getCorrectBarcode(input) {
+        if (barcodeMap[input]) return barcodeMap[input];
+        const norm = normalizeBarcode(input);
+        return Object.keys(barcodeMap).find(k => normalizeBarcode(k) === norm)
+            ? barcodeMap[Object.keys(barcodeMap).find(k => normalizeBarcode(k) === norm)]
+            : undefined;
+    }
+    function replaceInputValue(e) {
+        const correct = getCorrectBarcode(e.target.value.trim());
+        if (!correct) return;
+        e.target.value = correct;
+        e.target.dispatchEvent(new Event('input', { bubbles: true }));
+        e.target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+    }
+    function replaceAndClearBarcode() {
+        const inp = document.querySelector('#barcode.barcode-input');
+        if (!inp?.value) return;
+        const correct = getCorrectBarcode(inp.value.trim());
+        if (correct) {
+            inp.value = correct;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+        }
+        setTimeout(() => { inp.value = ''; }, 5);
+    }
+
+    // ── Копіювання без дужок ───────────────────────────────────────────────────
+    const removeBracketsAndNumbers = e => {
+        e.preventDefault();
+        e.clipboardData.setData('text/plain', window.getSelection().toString().replace(/\[\d+\]|\(\d+\)/g, ''));
+    };
+
+    // ── Поле ваги ──────────────────────────────────────────────────────────────
+    function addWeightListener() {
+        const f = document.querySelector('#weight_1.form-shipment-store-table-left-row-control');
+        if (f && !f.dataset.rulikWeight) {
+            f.addEventListener('input', e => { e.target.value = e.target.value.replace(/[\s,юб]/g, '.'); });
+            f.dataset.rulikWeight = '1';
+        }
+    }
+
+    // ── Пошук через clipboard ──────────────────────────────────────────────────
+    function addCopyButtonListeners() {
+        document.querySelectorAll('.copy-button').forEach(btn => {
+            if (btn.dataset.rulikCopy) return;
+            btn.addEventListener('mousedown', e => {
+                if (e.button !== get('mouseButton')) return;
+                navigator.clipboard.readText().then(t => {
+                    if (t) window.open(`https://aladin-kiev.com/ua/search/?search=${encodeURIComponent(t)}`, '_blank');
+                }).catch(() => {});
+            });
+            btn.dataset.rulikCopy = '1';
+        });
+    }
+
+    // ── Подвійний клік vs__selected ────────────────────────────────────────────
+    document.addEventListener('dblclick', e => {
+        if (!e.target.classList.contains('vs__selected')) return;
+        const el = e.target;
+        if (el.style.textDecoration === 'line-through' && el.style.color === 'red') {
+            el.style.textDecoration = 'none'; el.style.color = '';
+        } else if (el.style.textDecoration === 'line-through') {
+            el.style.color = 'red';
+        } else {
+            el.style.textDecoration = 'line-through'; el.style.color = '';
+        }
+    });
+
+    // ── Кольори кнопок ─────────────────────────────────────────────────────────
+    function randomNonBlueColor() {
+        const hex = () => Math.floor(Math.random() * 256);
+        let r, g, b;
+        do { r = hex(); g = hex(); b = hex(); } while (b > r && b > g);
+        return `#${[r,g,b].map(n => n.toString(16).padStart(2,'0')).join('')}`;
+    }
+
+    // ── Мітка кальян/колба ─────────────────────────────────────────────────────
+    const HOOKAH_KEYWORDS = (get('hookahWords') || 'кальян').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const FLASK_KEYWORDS  = (get('flaskWords')  || 'колба').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+    const isShipmentPage = () =>
+        /\/orders\/\d+\/ship/.test(location.pathname) || /\/shipments\/\d+/.test(location.pathname);
+
+    const hasBoxSelector = () =>
+        !!document.querySelector('select option[value="2"]') ||
+        !!document.querySelector('.select-base-wrapper select');
+
+    function getProductCellText(td) {
+        let text = [...td.childNodes].filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('');
+        return (text.trim() || td.textContent).toLowerCase().trim();
+    }
+
+    function applyHookahLabel() {
+        if (!isShipmentPage()) { console.log('[RulikMod] ⛔ не сторінка відвантаження:', location.pathname); return; }
+        if (!hasBoxSelector()) { console.log('[RulikMod] ⛔ select коробки не знайдено'); return; }
+
+        const labelEl = document.querySelector('h1.form-shipment-store-table-left-shipment-method');
+        if (!labelEl) { console.log('[RulikMod] ⛔ h1 методу доставки не знайдено'); return; }
+
+        if (!labelEl.dataset.rulikOriginal) labelEl.dataset.rulikOriginal = labelEl.textContent.trim();
+        const original = labelEl.dataset.rulikOriginal;
+        console.log('[RulikMod] Метод:', original);
+
+        if (!original.toLowerCase().includes('нова пошта')) { console.log('[RulikMod] ⛔ не Нова пошта'); return; }
+
+        const cells = document.querySelectorAll('td.form-shipment-store-right-table-tbody-td-8');
+        console.log('[RulikMod] td-8 рядків:', cells.length);
+        if (!cells.length) { console.log('[RulikMod] ⛔ таблиця не завантажилась'); return; }
+
+        let hasHookah = false, hasFlask = false, hasTest = false;
+        const testWord = get('hookahTestWord').trim().toLowerCase();
+        cells.forEach(td => {
+            const text = getProductCellText(td);
+            if (HOOKAH_KEYWORDS.some(w => text.includes(w))) hasHookah = true;
+            if (FLASK_KEYWORDS.some(w => text.includes(w)))  hasFlask  = true;
+            if (testWord && text.includes(testWord))          hasTest   = true;
+        });
+        console.log('[RulikMod] Знайдено:', { hasHookah, hasFlask, hasTest });
+
+        const parts = [];
+        if (hasHookah) parts.push('кальян');
+        if (hasFlask)  parts.push('колба');
+        if (hasTest && testWord) parts.push('тест:' + get('hookahTestWord').trim());
+
+        const orderMatch = document.querySelector('h1.form-title')?.textContent.match(/#(\d+)/);
+        const orderNum = orderMatch ? '#' + orderMatch[1] : '';
+        const suffix = parts.length ? `поштомат ${parts.join('/')} ${orderNum}`.trim() : null;
+        console.log('[RulikMod] Суфікс:', suffix);
+
+        if (!suffix) {
+            if (labelEl.dataset.rulikSuffix) { labelEl.innerHTML = `<span>${original}</span>`; delete labelEl.dataset.rulikSuffix; }
+            return;
+        }
+        if (labelEl.dataset.rulikSuffix === suffix) return;
+        labelEl.dataset.rulikSuffix = suffix;
+        labelEl.innerHTML = `<span>${original}</span><span style="color:#ffeaa7;font-size:.8em;display:block;margin-top:2px">${suffix}</span>`;
+        console.log(`[RulikMod] ✅ "${original}" → "${suffix}"`);
+    }
+
+    // ── Чекбокс "Зібрано" ─────────────────────────────────────────────────────
+    // Зберігає зібрані замовлення в JSONBin під ключем "collected": { "1095817": true }
+
+    function getOrderId() {
+        const m = location.pathname.match(/\/orders\/(\d+)\/ship/);
+        return m ? m[1] : null;
+    }
+
+    // Читає поточний bin і повертає весь record
+    async function fetchBinRecord() {
+        const r = await fetch(JSONBIN_URL + '/latest', {
+            headers: { 'X-Master-Key': JSONBIN_KEY }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return (await r.json()).record;
+    }
+
+    async function setCollected(orderId, isCollected) {
+        try {
+            const record = await fetchBinRecord();
+            const collected = record.collected || {};
+            if (isCollected) {
+                collected[orderId] = true;
+            } else {
+                delete collected[orderId];
+            }
+            await saveToJsonBin({ ...record, collected });
+        } catch (err) {
+            console.warn('[RulikMod] ❌ Помилка збереження collected:', err.message);
+        }
+    }
+
+    async function isCollected(orderId) {
+        try {
+            const record = await fetchBinRecord();
+            return !!(record.collected && record.collected[orderId]);
+        } catch {
+            return false;
+        }
+    }
+
+    // Відстежуємо поточний orderId щоб скидати при SPA-навігації
+    let _collectedCurrentOrderId = null;
+
+    function resetCollectedCheckbox() {
+        document.getElementById('rulik-collected-wrap')?.remove();
+        document.getElementById('rulik-collected-wrap-real')?.remove();
+        _collectedCurrentOrderId = null;
+    }
+
+    // Перехоплюємо pushState/replaceState (Vue Router змінює URL без reload)
+    const _origPushState = history.pushState.bind(history);
+    const _origReplaceState = history.replaceState.bind(history);
+    history.pushState = (...args) => { _origPushState(...args); resetCollectedCheckbox(); };
+    history.replaceState = (...args) => { _origReplaceState(...args); resetCollectedCheckbox(); };
+    window.addEventListener('popstate', resetCollectedCheckbox);
+
+    async function createCollectedCheckbox() {
+        if (!isShipmentPage()) return;
+        const orderId = getOrderId();
+        if (!orderId) return;
+
+        // Вже створено для цього замовлення
+        if (_collectedCurrentOrderId === orderId) return;
+
+        // Елементи ще є в DOM (не встигли прибратись) — прибираємо
+        if (document.getElementById('rulik-collected-wrap') ||
+            document.getElementById('rulik-collected-wrap-real')) {
+            resetCollectedCheckbox();
+        }
+
+        const titleEl = document.querySelector('h1.form-title');
+        if (!titleEl) return;
+
+        // Фіксуємо orderId одразу щоб повторні виклики не проходили
+        _collectedCurrentOrderId = orderId;
+
+        // Заглушка в body (не в h1 — щоб не тригерити observer)
+        const placeholder = document.createElement('span');
+        placeholder.id = 'rulik-collected-wrap';
+        placeholder.style.display = 'none';
+        document.body.appendChild(placeholder);
+
+        const collected = await isCollected(orderId);
+
+        // Якщо за час запиту юзер перейшов на інше замовлення — скасовуємо
+        if (_collectedCurrentOrderId !== orderId) return;
+
+        const wrap = document.createElement('div');
+        wrap.id = 'rulik-collected-wrap-real';
+        Object.assign(wrap.style, {
+            display: 'inline-flex', alignItems: 'center', gap: '10px',
+            cursor: 'pointer', userSelect: 'none', marginLeft: '16px',
+            verticalAlign: 'middle', padding: '4px 12px',
+            borderRadius: '8px',
+            background: collected ? 'rgba(0,184,148,0.12)' : 'rgba(255,255,255,0.06)',
+            border: `2px solid ${collected ? '#00b894' : 'rgba(255,255,255,0.15)'}`,
+            transition: 'all 0.25s'
+        });
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = 'rulik-collected-cb';
+        cb.checked = collected;
+        Object.assign(cb.style, {
+            width: '22px', height: '22px',
+            cursor: 'pointer', accentColor: '#00b894', flexShrink: '0'
+        });
+
+        const lbl = document.createElement('label');
+        lbl.htmlFor = 'rulik-collected-cb';
+        lbl.textContent = collected ? '✅ Зібрано' : 'Зібрано';
+        Object.assign(lbl.style, {
+            fontSize: '16px', fontWeight: '700', cursor: 'pointer',
+            color: collected ? '#00b894' : '#000',
+            transition: 'color 0.2s', margin: '0', letterSpacing: '0.3px'
+        });
+
+        if (collected) {
+            titleEl.style.borderLeft = '4px solid #00b894';
+            titleEl.style.paddingLeft = '10px';
+        }
+
+        cb.addEventListener('change', async () => {
+            cb.disabled = true;
+            lbl.textContent = '⏳';
+            wrap.style.opacity = '0.6';
+
+            await setCollected(orderId, cb.checked);
+
+            const on = cb.checked;
+            lbl.textContent   = on ? '✅ Зібрано' : 'Зібрано';
+            lbl.style.color   = on ? '#00b894' : '#000';
+            wrap.style.background = on ? 'rgba(0,184,148,0.12)' : 'rgba(255,255,255,0.06)';
+            wrap.style.border = `2px solid ${on ? '#00b894' : 'rgba(255,255,255,0.15)'}`;
+            wrap.style.opacity = '1';
+            titleEl.style.borderLeft  = on ? '4px solid #00b894' : '';
+            titleEl.style.paddingLeft = on ? '10px' : '';
+            cb.disabled = false;
+        });
+
+        wrap.appendChild(cb);
+        wrap.appendChild(lbl);
+
+        masterObserver.disconnect();
+        titleEl.style.display    = 'inline-flex';
+        titleEl.style.alignItems = 'center';
+        titleEl.style.flexWrap   = 'wrap';
+        titleEl.appendChild(wrap);
+        masterObserver.observe(document.body, { childList: true, subtree: true });
+
+        console.log(`[RulikMod] ✅ Чекбокс "Зібрано" для #${orderId}: ${collected}`);
+    }
+    const formatNum = n => n.toLocaleString('uk-UA');
+
+    function addSaveButtonListener() {
+        if (!isShipmentPage()) return;
+        document.querySelectorAll('button.form-block-buttons-submit').forEach(btn => {
+            if (btn.dataset.rulikCollectedSave) return;
+            btn.dataset.rulikCollectedSave = '1';
+            btn.addEventListener('click', async () => {
+                const orderId = getOrderId();
+                if (!orderId) return;
+                await setCollected(orderId, false);
+                // Знімаємо чекбокс візуально
+                const cb = document.getElementById('rulik-collected-cb');
+                const lbl = document.querySelector('#rulik-collected-wrap-real label');
+                const titleEl = document.querySelector('h1.form-title');
+                if (cb) cb.checked = false;
+                if (lbl) lbl.style.color = '#aaa';
+                if (titleEl) { titleEl.style.borderLeft = ''; titleEl.style.paddingLeft = ''; }
+                console.log(`[RulikMod] ✅ Запис #${orderId} видалено з collected`);
+            });
+        });
+    }
+
+    function parseTableStats() {
+        const rows = document.querySelectorAll('table.crud-table-style tbody tr');
+        if (!rows.length) return null;
+        const stats = {};
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td.crud-table-tbody-tr-td-info');
+            if (cells.length < 9) return;
+            const name = cells[1]?.textContent.trim();
+            const sum  = parseInt(cells[8]?.textContent.replace(/\s/g, ''), 10);
+            if (!name || isNaN(sum)) return;
+            const s = stats[name] ??= { total: 0, count: 0, max: -Infinity, min: Infinity, amounts: [] };
+            s.total += sum; s.count++; s.amounts.push(sum);
+            if (sum > s.max) s.max = sum;
+            if (sum < s.min) s.min = sum;
+        });
+        return Object.keys(stats).length ? stats : null;
+    }
+
+    function createStatsPanel() {
+        const statsPanel = document.createElement('div');
+        Object.assign(statsPanel.style, {
+            position:'fixed', bottom:'160px', left:'20px', width:'360px', maxHeight:'80vh',
+            background:'linear-gradient(145deg,#1e272e,#2f3640)', color:'#dfe6e9',
+            borderRadius:'12px', padding:'16px', zIndex:'9998',
+            boxShadow:'0 8px 24px rgba(0,0,0,.5)', border:'1px solid rgba(255,255,255,.12)',
+            display:'none', overflowY:'auto', fontFamily:"'Segoe UI',Arial,sans-serif", fontSize:'13px'
+        });
+
+        function toggleStats() {
+            const hidden = statsPanel.style.display === 'none';
+            if (hidden) { renderStats(); statsPanel.style.display = 'block'; }
+            else statsPanel.style.display = 'none';
+        }
+
+        function renderStats() {
+            const data = parseTableStats();
+            statsPanel.innerHTML = '';
+
+            const h = Object.assign(document.createElement('div'), {
+                style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'
+            });
+            h.innerHTML = '<b style="font-size:15px">📊 Статистика по співробітниках</b>';
+            const closeBtn = Object.assign(document.createElement('button'), { textContent: '✖' });
+            Object.assign(closeBtn.style, { background:'rgba(255,255,255,.1)', border:'none', color:'#fff', cursor:'pointer', borderRadius:'6px', padding:'2px 8px', fontSize:'14px' });
+            closeBtn.addEventListener('click', toggleStats);
+            h.appendChild(closeBtn);
+            statsPanel.appendChild(h);
+
+            if (!data) {
+                statsPanel.insertAdjacentHTML('beforeend', '<div style="color:#ffeaa7">⚠ Таблиця не знайдена або порожня</div>');
+                return;
+            }
+
+            let grandTotal = 0, grandCount = 0;
+            Object.values(data).forEach(s => { grandTotal += s.total; grandCount += s.count; });
+
+            statsPanel.insertAdjacentHTML('beforeend', `
+                <div style="background:rgba(255,255,255,.07);border-radius:8px;padding:10px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="opacity:.7">Всього рядків:</span><b>${grandCount}</b></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="opacity:.7">Загальна сума:</span><b style="color:#55efc4">${formatNum(grandTotal)} ₴</b></div>
+                    <div style="display:flex;justify-content:space-between"><span style="opacity:.7">Середній чек:</span><b>${formatNum(Math.round(grandTotal/grandCount))} ₴</b></div>
+                </div>
+            `);
+
+            Object.entries(data).sort((a, b) => b[1].total - a[1].total).forEach(([name, s]) => {
+                const avg = Math.round(s.total / s.count);
+                const pct = grandTotal > 0 ? (s.total / grandTotal * 100).toFixed(1) : 0;
+                const sa  = [...s.amounts].sort((a, b) => a - b);
+                const mid = Math.floor(sa.length / 2);
+                const med = sa.length % 2 ? sa[mid] : Math.round((sa[mid-1] + sa[mid]) / 2);
+                const card = document.createElement('div');
+                card.style.cssText = 'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;margin-bottom:10px';
+                card.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+                        <b style="font-size:14px">${name}</b><span style="color:#74b9ff;font-size:12px">${pct}%</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,.1);border-radius:4px;height:4px;margin:6px 0 10px">
+                        <div style="width:${pct}%;background:linear-gradient(90deg,#00cec9,#0984e3);border-radius:4px;height:100%"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;font-size:12px;opacity:.9">
+                        <span>📦 Замовлень: <b>${s.count}</b></span>
+                        <span>💰 Сума: <b style="color:#55efc4">${formatNum(s.total)} ₴</b></span>
+                        <span>📈 Середній: <b>${formatNum(avg)} ₴</b></span>
+                        <span>📉 Медіана: <b>${formatNum(med)} ₴</b></span>
+                        <span>🔺 Макс: <b>${formatNum(s.max)} ₴</b></span>
+                        <span>🔻 Мін: <b>${formatNum(s.min)} ₴</b></span>
+                    </div>
+                `;
+                statsPanel.appendChild(card);
+            });
+
+            const refreshBtn = Object.assign(document.createElement('button'), { textContent: '🔄 Оновити' });
+            Object.assign(refreshBtn.style, { width:'100%', padding:'8px', marginTop:'4px', background:'rgba(255,255,255,.1)', color:'#fff', border:'1px solid rgba(255,255,255,.2)', borderRadius:'6px', cursor:'pointer', fontSize:'13px' });
+            refreshBtn.addEventListener('click', renderStats);
+            statsPanel.appendChild(refreshBtn);
+        }
+
+        // Чіт-код "rulik"
+        let cheatBuf = '', cheatTimer = null;
+        document.addEventListener('keydown', e => {
+            clearTimeout(cheatTimer);
+            cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-5);
+            if (cheatBuf === 'rulik') { cheatBuf = ''; toggleStats(); }
+            cheatTimer = setTimeout(() => { cheatBuf = ''; }, 1500);
+        });
+
+        document.body.appendChild(statsPanel);
+    }
+
+    // ── Панель налаштувань ─────────────────────────────────────────────────────
+    function createSettingsPanel() {
+        // helpers
+        const el = (tag, props = {}, styles = {}) => Object.assign(Object.assign(document.createElement(tag), props), { style: Object.assign(document.createElement(tag).style, styles) });
+        const css = (el, s) => { Object.assign(el.style, s); return el; };
+
+        function makeLabel(text) {
+            return css(Object.assign(document.createElement('label'), { textContent: text }),
+                { display:'block', marginBottom:'4px', fontSize:'13px', opacity:'0.8' });
+        }
+        function makeInput(type, value, placeholder = '') {
+            const el = type === 'textarea' ? document.createElement('textarea') : document.createElement('input');
+            if (type !== 'textarea') el.type = type;
+            el.value = value || ''; el.placeholder = placeholder;
+            css(el, { width:'100%', padding:'8px 12px', margin:'0 0 14px', border:'none', borderRadius:'8px', fontSize:'14px', boxSizing:'border-box', boxShadow:'inset 0 2px 4px rgba(0,0,0,.2)', transition:'all .3s' });
+            el.addEventListener('focus', () => el.style.boxShadow = '0 0 10px rgba(0,0,0,.5)');
+            el.addEventListener('blur',  () => el.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,.2)');
+            return el;
+        }
+        function makeSelect(options, current) {
+            const sel = css(document.createElement('select'), { width:'100%', padding:'8px 12px', margin:'0 0 14px', border:'none', borderRadius:'8px', fontSize:'14px', boxSizing:'border-box', cursor:'pointer' });
+            options.forEach(({ value, text }) => {
+                const opt = Object.assign(document.createElement('option'), { value, textContent: text });
+                if (value == current) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            return sel;
+        }
+        function makeCheckbox(labelText, checked) {
+            const wrap = css(document.createElement('div'), { display:'flex', alignItems:'center', margin:'10px 0', padding:'6px 8px', borderRadius:'6px', background:'rgba(255,255,255,.05)', transition:'background .3s' });
+            const cb = css(Object.assign(document.createElement('input'), { type:'checkbox', checked }), { marginRight:'10px', transform:'scale(1.2)', cursor:'pointer' });
+            const span = Object.assign(document.createElement('span'), { textContent: labelText });
+            span.style.fontSize = '14px';
+            wrap.appendChild(cb); wrap.appendChild(span);
+            wrap.addEventListener('mouseover', () => wrap.style.background = 'rgba(255,255,255,.12)');
+            wrap.addEventListener('mouseout',  () => wrap.style.background = 'rgba(255,255,255,.05)');
+            return { wrap, cb };
+        }
+        function makeDivider(text) {
+            return css(Object.assign(document.createElement('div'), { textContent: text }),
+                { fontSize:'11px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', opacity:'0.5', borderTop:'1px solid rgba(255,255,255,.15)', paddingTop:'12px', marginTop:'4px', marginBottom:'10px' });
+        }
+        function makeHint(text, color = '#aaa') {
+            const s = Object.assign(document.createElement('small'), { textContent: text });
+            s.style.cssText = `color:${color};display:block;margin-top:-10px;margin-bottom:12px;font-size:12px`;
+            return s;
+        }
+
+        // Кнопка
+        const toggleBtn = css(Object.assign(document.createElement('button'), { textContent: 'Rulik Mod' }), {
+            position:'fixed', bottom:'150px', left:'20px', zIndex:'10000', padding:'12px 25px',
+            background:'linear-gradient(145deg,#00cec9,#0984e3)', color:'#fff', border:'none',
+            borderRadius:'10px', cursor:'pointer', fontSize:'16px', fontWeight:'600',
+            boxShadow:'0 6px 12px rgba(0,0,0,.3)', transition:'all .3s'
+        });
+        toggleBtn.dataset.rulikToggle = '1';
+        toggleBtn.addEventListener('mouseover', () => { toggleBtn.style.transform = 'translateY(-2px)'; toggleBtn.style.boxShadow = '0 8px 16px rgba(0,206,201,.5)'; });
+        toggleBtn.addEventListener('mouseout',  () => { toggleBtn.style.transform = 'translateY(0)'; toggleBtn.style.boxShadow = '0 6px 12px rgba(0,0,0,.3)'; });
+
+        // Панель
+        const panel = css(Object.assign(document.createElement('div'), { className: 'settings-panel' }), {
+            position:'fixed', top:'20px', left:'20px', padding:'30px', borderRadius:'15px',
+            boxShadow:'0 10px 20px rgba(0,0,0,.4)', zIndex:'9999', fontFamily:"'Segoe UI',Arial,sans-serif",
+            width:'340px', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,.15)',
+            display:'none', opacity:'0', transform:'translateY(-20px)',
+            transition:'opacity .3s,transform .3s', overflowY:'auto', maxHeight:'90vh'
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            const hidden = panel.style.display === 'none';
+            panel.style.display = hidden ? 'block' : '';
+            setTimeout(() => { panel.style.opacity = hidden ? '1' : '0'; panel.style.transform = hidden ? 'translateY(0)' : 'translateY(-20px)'; }, hidden ? 10 : 0);
+            if (!hidden) setTimeout(() => { panel.style.display = 'none'; }, 300);
+            toggleBtn.textContent = hidden ? 'Сховати' : 'Rulik Mod';
+        });
+
+        const append = (...els) => els.forEach(e => panel.appendChild(e));
+
+        // Заголовок
+        const titleEl = css(Object.assign(document.createElement('h2'), { textContent: 'Rulik Mod 3.0' }),
+            { textAlign:'center', margin:'0 0 4px', fontSize:'22px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'2px' });
+        const subtitleEl = css(Object.assign(document.createElement('div'), { textContent: 'by Щодик 8===✊🏼=D💦😩' }),
+            { textAlign:'center', margin:'0 0 20px', fontSize:'10px', opacity:'0.5', letterSpacing:'1px' });
+        append(titleEl, subtitleEl);
+
+        // Вигляд
+        append(makeDivider('🎨 Вигляд'));
+        append(makeLabel('Video URL:'));
+        const videoUrlInput = makeInput('text', get('videoUrl'), 'https://example.com/bg.mp4');
+        videoUrlInput.addEventListener('input', () => { set('videoUrl', videoUrlInput.value); });
+        append(videoUrlInput);
+
+        append(makeLabel('Background Image URL:'));
+        const bgUrlInput = makeInput('text', get('backgroundImageUrl'), 'https://example.com/bg.jpg');
+        bgUrlInput.addEventListener('input', () => { set('backgroundImageUrl', bgUrlInput.value); applyTheme(); });
+        append(bgUrlInput);
+
+        const { wrap: snowWrap, cb: snowCb } = makeCheckbox('Увімкнути сніг', get('snowEnabled'));
+        snowCb.addEventListener('change', () => { set('snowEnabled', snowCb.checked); snowCb.checked ? createSnowfall() : removeSnowfall(); });
+        append(snowWrap);
+
+        const { wrap: videoBgWrap, cb: videoBgCb } = makeCheckbox('Відео-фон', get('videoBackgroundEnabled'));
+        videoBgCb.addEventListener('change', () => { set('videoBackgroundEnabled', videoBgCb.checked); videoBgCb.checked ? setupVideoBackground() : removeVideoBackground(); });
+        append(videoBgWrap);
+
+        const { wrap: bgWrap, cb: bgCb } = makeCheckbox('Увімкнути фон', get('backgroundEnabled'));
+        bgCb.addEventListener('change', () => { set('backgroundEnabled', bgCb.checked); applyTheme(); });
+        append(bgWrap);
+
+        append(makeLabel('Тема сайту:'));
+        const themeSelect = makeSelect([
+            'off','default','dark','light','neon','pastel','solarized','monochrome',
+            'cyberpunk','forest','dusk','stone','ocean','sunset','emerald','vintage','arctic'
+        ].map(v => ({ value: v, text: v.charAt(0).toUpperCase() + v.slice(1) })), get('theme'));
+        themeSelect.addEventListener('change', () => { set('theme', themeSelect.value); applyTheme(); });
+        append(themeSelect);
+
+        // Звук
+        append(makeDivider('🔔 Звуки'));
+        append(makeLabel('Звук (не той товар):'));
+        const soundNormalInput = makeInput('text', get('soundNormalUrl'), '/alert.mp3');
+        append(soundNormalInput);
+        append(makeLabel('Звук (треба збирати):'));
+        const soundHighInput = makeInput('text', get('soundHighUrl'), '/alarm.mp3');
+        append(soundHighInput);
+        append(makeLabel('Мінімальна кількість для звуку:'));
+        const minSoundInput = makeInput('number', get('minSoundCount'));
+        minSoundInput.min = '0';
+        append(minSoundInput, makeHint('0 або порожньо = звук вимкнено'));
+
+        append(makeLabel('Гучність (%):'));
+        const volWrap = css(document.createElement('div'), { display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' });
+        const volumeSlider = Object.assign(document.createElement('input'), { type:'range', min:'0', max:'100', value: get('volume') });
+        volumeSlider.style.flex = '1';
+        const volLabel = Object.assign(document.createElement('span'), { textContent: get('volume') + '%' });
+        volLabel.style.minWidth = '38px';
+        volumeSlider.addEventListener('input', () => { volLabel.textContent = volumeSlider.value + '%'; });
+        volWrap.appendChild(volumeSlider); volWrap.appendChild(volLabel);
+        append(volWrap);
+
+        // Фільтрація
+        append(makeDivider('🚫 Фільтрація назв'));
+        const { wrap: filterWrap, cb: filterCb } = makeCheckbox('Увімкнути фільтрацію стоп-слів', get('enableFilter'));
+        append(filterWrap);
+        const { wrap: bracketsWrap, cb: bracketsCb } = makeCheckbox('Видаляти кириличні дужки (переклад назви)', get('removeCyrillicBrackets'));
+        append(bracketsWrap);
+        append(makeLabel('URL файлу стоп-слів (GitHub raw):'));
+        const stopWordsUrlInput = makeInput('text', get('stopWordsUrl'), 'https://api.jsonbin.io/v3/b/...');
+        append(stopWordsUrlInput);
+
+        const loadSwBtn = css(Object.assign(document.createElement('button'), { textContent: '⬇ Завантажити стоп-слова' }),
+            { width:'100%', padding:'8px', marginBottom:'12px', background:'#0984e3', color:'#fff', border:'none', cursor:'pointer', borderRadius:'6px', fontSize:'13px' });
+        const loadSwStatus = makeHint(get('stopWordsUrl') ? '(завантажується при старті)' : '(URL не задано)');
+        loadSwStatus.style.marginTop = '-8px';
+
+        loadSwBtn.addEventListener('click', () => {
+            const url = stopWordsUrlInput.value.trim();
+            if (!url) { loadSwStatus.textContent = '❌ URL порожній'; return; }
+            loadSwStatus.textContent = '⏳ Завантаження...';
+            fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+                .then(text => {
+                    const words = parseRemoteWords(text).trim();
+                    stopWordsInput.value = words;
+                    set('stopWords', words);
+                    loadSwStatus.textContent = '✅ Завантажено ' + words.split(',').filter(s => s.trim()).length + ' слів';
+                })
+                .catch(err => { loadSwStatus.textContent = '❌ ' + err.message; });
+        });
+        append(loadSwBtn, loadSwStatus);
+        append(makeLabel('Стоп-слова (через кому):'));
+        const stopWordsInput = makeInput('textarea', get('stopWords'), 'одноразка, elf bar, hqd');
+        stopWordsInput.rows = 3;
+        append(stopWordsInput, makeHint('Видаляються цілі слова незалежно від регістру'));
+
+        // Інше
+        append(makeDivider('⚙️ Інше'));
+        append(makeLabel('Кнопка миші для пошуку:'));
+        const mouseSelect = makeSelect([
+            { value:0, text:'Ліва' }, { value:1, text:'Середня' }, { value:2, text:'Права' }
+        ], get('mouseButton'));
+        mouseSelect.addEventListener('change', () => { set('mouseButton', parseInt(mouseSelect.value, 10)); });
+        append(mouseSelect);
+
+        // Мітка кальяну
+        append(makeDivider('Мітка кальян/колба'));
+        append(makeHint('Шукає слова у товарах і додає мітку до "Нова пошта" на сторінці відвантаження.'));
+        append(makeLabel('Слова кальяну (через кому):'));
+        const hookahWordsInput = makeInput('text', get('hookahWords') || 'кальян', 'кальян, кальяни');
+        append(hookahWordsInput);
+        append(makeLabel('Слова колби (через кому):'));
+        const flaskWordsInput = makeInput('text', get('flaskWords') || 'колба', 'колба, колби');
+        append(flaskWordsInput);
+        append(makeLabel('Тестове слово (порожньо = вимкнено):'));
+        const hookahTestInput = makeInput('text', get('hookahTestWord'), 'вугілля');
+        append(hookahTestInput);
+
+        // ── Секція: JSONBin ──
+        append(makeDivider('☁️ Хмарна синхронізація'));
+
+        const syncStatusEl = makeHint('', '#aaa');
+        const lastSync = parseInt(localStorage.getItem(JSONBIN_SYNC_KEY) || '0', 10);
+        syncStatusEl.textContent = lastSync
+            ? `Остання синхронізація: ${new Date(lastSync).toLocaleString('uk-UA')}`
+            : 'Ще не синхронізувалось';
+        append(syncStatusEl);
+
+        const syncRow = css(document.createElement('div'), { display:'flex', gap:'8px', marginBottom:'14px' });
+
+        const syncBtn = css(Object.assign(document.createElement('button'), { textContent: '🔄 Синхронізувати' }), {
+            flex:'1', padding:'9px', background:'#0984e3', color:'#fff',
+            border:'none', borderRadius:'8px', cursor:'pointer', fontSize:'13px'
+        });
+        syncBtn.addEventListener('click', async () => {
+            syncBtn.textContent = '⏳ Завантаження...';
+            syncBtn.disabled = true;
+            await syncFromJsonBin(true);
+            syncStatusEl.textContent = `Остання синхронізація: ${new Date().toLocaleString('uk-UA')}`;
+            // Оновлюємо поле стоп-слів якщо воно вже відмальоване
+            stopWordsInput.value = get('stopWords');
+            syncBtn.textContent = '✅ Готово';
+            setTimeout(() => { syncBtn.textContent = '🔄 Синхронізувати'; syncBtn.disabled = false; }, 2000);
+        });
+
+        const saveCloudBtn = css(Object.assign(document.createElement('button'), { textContent: '💾 Зберегти в хмару' }), {
+            flex:'1', padding:'9px', background:'#6c5ce7', color:'#fff',
+            border:'none', borderRadius:'8px', cursor:'pointer', fontSize:'13px'
+        });
+        saveCloudBtn.addEventListener('click', async () => {
+            saveCloudBtn.textContent = '⏳ Збереження...';
+            saveCloudBtn.disabled = true;
+            const words = stopWordsInput.value.trim().split(',').map(s => s.trim()).filter(Boolean);
+            const ok = await saveToJsonBin({
+                barcodes: barcodeMap,
+                stopWords: words,
+                features
+            });
+            saveCloudBtn.textContent = ok ? '✅ Збережено' : '❌ Помилка';
+            setTimeout(() => { saveCloudBtn.textContent = '💾 Зберегти в хмару'; saveCloudBtn.disabled = false; }, 2000);
+        });
+
+        syncRow.appendChild(syncBtn);
+        syncRow.appendChild(saveCloudBtn);
+        append(syncRow);
+        append(makeHint('Синхронізується автоматично раз на добу о 12:00', '#888'));
+
+        // ── Секретна кнопка ──
+        const secretBtn = css(Object.assign(document.createElement('button'), { textContent: 'Не чіпати' }), {
+            width:'100%', padding:'8px', marginTop:'4px', marginBottom:'14px',
+            background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.2)',
+            border:'1px solid rgba(255,255,255,0.07)',
+            borderRadius:'8px', cursor:'pointer', fontSize:'11px',
+            letterSpacing:'2px', textTransform:'uppercase',
+            transition:'all 0.3s'
+        });
+        secretBtn.addEventListener('mouseover', () => {
+            secretBtn.style.color = 'rgba(255,255,255,0.5)';
+            secretBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+        });
+        secretBtn.addEventListener('mouseout', () => {
+            secretBtn.style.color = 'rgba(255,255,255,0.2)';
+            secretBtn.style.borderColor = 'rgba(255,255,255,0.07)';
+        });
+        secretBtn.addEventListener('click', () => {
+            window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+        });
+        append(secretBtn);
+
+        // Кнопка Застосувати
+        const applyBtn = css(Object.assign(document.createElement('button'), { textContent: 'Застосувати та закрити' }),
+            { width:'100%', padding:'12px', marginTop:'8px', background:'#4CAF50', color:'#fff', border:'none', cursor:'pointer', borderRadius:'8px', fontSize:'15px', fontWeight:'600' });
+
+        applyBtn.addEventListener('click', () => {
+            set('soundNormalUrl',  soundNormalInput.value.trim());
+            set('soundHighUrl',    soundHighInput.value.trim()   || '/alarm.mp3');
+            set('minSoundCount',   parseInt(minSoundInput.value, 10) || 0);
+            set('volume',          parseInt(volumeSlider.value, 10));
+            set('enableFilter',          filterCb.checked);
+            set('removeCyrillicBrackets', bracketsCb.checked);
+            set('stopWords',       stopWordsInput.value.trim());
+            set('stopWordsUrl',    stopWordsUrlInput.value.trim());
+            set('hookahWords',     hookahWordsInput.value.trim());
+            set('flaskWords',      flaskWordsInput.value.trim());
+            set('hookahTestWord',  hookahTestInput.value.trim());
+
+            HOOKAH_KEYWORDS.length = 0; FLASK_KEYWORDS.length = 0;
+            get('hookahWords').split(',').forEach(w => { const t = w.trim().toLowerCase(); if (t) HOOKAH_KEYWORDS.push(t); });
+            get('flaskWords').split(',').forEach(w => { const t = w.trim().toLowerCase(); if (t) FLASK_KEYWORDS.push(t); });
+
+            const lbl = document.querySelector('h1.form-shipment-store-table-left-shipment-method');
+            if (lbl) delete lbl.dataset.rulikSuffix;
+
+            applyAudioSettings(); applyTheme();
+            panel.style.opacity = '0'; panel.style.transform = 'translateY(-20px)';
+            setTimeout(() => { panel.style.display = 'none'; }, 300);
+            toggleBtn.textContent = 'Rulik Mod';
+        });
+        append(applyBtn);
+
+        document.body.appendChild(toggleBtn);
+        document.body.appendChild(panel);
+    }
+
+    // ── Аварійна кнопка синхронізації (завжди видима, навіть якщо enabled:false) ──
+    function createEmergencySyncBtn() {
+        const btn = document.createElement('button');
+        btn.textContent = '☁';
+        btn.title = 'Rulik Mod: примусова синхронізація з хмарою';
+        btn.dataset.rulikEmergency = '1';
+        Object.assign(btn.style, {
+            position: 'fixed', bottom: '20px', left: '20px', zIndex: '10001',
+            width: '32px', height: '32px', borderRadius: '50%',
+            background: 'rgba(9,132,227,0.15)', color: 'rgba(9,132,227,0.5)',
+            border: '1px solid rgba(9,132,227,0.2)',
+            cursor: 'pointer', fontSize: '14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.3s', lineHeight: '1'
+        });
+        btn.addEventListener('mouseover', () => {
+            btn.style.background = 'rgba(9,132,227,0.8)';
+            btn.style.color = '#fff';
+            btn.style.transform = 'scale(1.15)';
+        });
+        btn.addEventListener('mouseout', () => {
+            btn.style.background = 'rgba(9,132,227,0.15)';
+            btn.style.color = 'rgba(9,132,227,0.5)';
+            btn.style.transform = 'scale(1)';
+        });
+        btn.addEventListener('click', async () => {
+            btn.textContent = '⏳';
+            btn.style.pointerEvents = 'none';
+            await syncFromJsonBin(true);
+            // Якщо після синхронізації features.enabled = true — відновлюємо панель
+            if (features.enabled) {
+                const toggleBtn = document.querySelector('button[data-rulik-toggle]');
+                if (!toggleBtn) {
+                    createSettingsPanel();
+                    createStatsPanel();
+                    applyTheme();
+                }
+            }
+            btn.textContent = '✓';
+            setTimeout(() => {
+                btn.textContent = '☁';
+                btn.style.pointerEvents = '';
+            }, 2000);
+        });
+        document.body.appendChild(btn);
+    }
+    let observerTimer = null;
+    const masterObserver = new MutationObserver(() => {
+        if (!features.enabled) return;
+        clearTimeout(observerTimer);
+        observerTimer = setTimeout(() => {
+            if (features.filter)      cleanTitles();
+            if (features.barcodes)    replaceAndClearBarcode();
+                                      resizeFont();
+                                      checkWaitingButtons();
+                                      addCopyButtonListeners();
+                                      addWeightListener();
+            document.querySelectorAll('.form-block-buttons-submit').forEach(btn => {
+                if (!btn.dataset.rulikColor) {
+                    btn.addEventListener('click', () => btn.style.backgroundColor = randomNonBlueColor());
+                    btn.dataset.rulikColor = '1';
+                }
+            });
+            if (features.autoField)   processTable();
+            if (features.hookahLabel) applyHookahLabel();
+            if (features.sound)       checkWaitingButtons();
+                                      createCollectedCheckbox();
+                                      addSaveButtonListener();
+        }, 200);
+    });
+    masterObserver.observe(document.body, { childList: true, subtree: true });
+
+    // ── Ініціалізація ──────────────────────────────────────────────────────────
+    document.addEventListener('copy', removeBracketsAndNumbers);
+    document.body.addEventListener('input', e => { if (features.barcodes) replaceInputValue(e); });
+    window.addEventListener('load', () => {
+        if (features.sound)     applyAudioSettings();
+        if (features.autoField) runWithRetry(processTable);
+    });
+
+    // Синхронізація з JSONBin (першочергово, потім ініціалізація)
+    syncFromJsonBin().then(() => {
+        setTimeout(() => {
+            createSettingsPanel(); createStatsPanel();
+            if (features.theme)  applyTheme();
+                                 setupVideoBackground();
+            if (get('snowEnabled')) createSnowfall();
+            if (features.sound)  applyAudioSettings();
+                                 loadRemoteStopWords();
+            if (features.filter) cleanTitles();
+                                 resizeFont();
+                                 checkWaitingButtons();
+                                 addCopyButtonListeners();
+                                 addWeightListener();
+            if (features.hookahLabel) applyHookahLabel();
+                                      createCollectedCheckbox();
+            applyFeatures();
+        }, 1000);
+    });
+
+})();
