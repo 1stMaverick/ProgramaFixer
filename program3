@@ -25,7 +25,7 @@
         // Звук
         soundNormalUrl:        '',
         soundHighUrl:          '/alarm.mp3',
-        minSoundCount:         999,
+        minSoundCount:         0,
         volume:                0,
         // Фільтрація
         enableFilter:          false,
@@ -1153,7 +1153,7 @@
         });
         append(loadSwBtn, loadSwStatus);
         append(makeLabel('Стоп-слова (через кому):'));
-        const stopWordsInput = makeInput('textarea', get('stopWords'), 'одноразка, elf bar, hqd');
+        const stopWordsInput = makeInput('textarea', get('stopWords'), '');
         stopWordsInput.rows = 3;
         append(stopWordsInput, makeHint('Видаляються цілі слова незалежно від регістру'));
 
@@ -1176,7 +1176,7 @@
         const flaskWordsInput = makeInput('text', get('flaskWords') || 'колба', 'колба, колби');
         append(flaskWordsInput);
         append(makeLabel('Тестове слово (порожньо = вимкнено):'));
-        const hookahTestInput = makeInput('text', get('hookahTestWord'), 'вугілля');
+        const hookahTestInput = makeInput('text', get('hookahTestWord'), '');
         append(hookahTestInput);
 
         // ── Секція: JSONBin ──
