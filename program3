@@ -11,7 +11,7 @@
     'use strict';
 
     // ── Єдиний конфіг (RulikMod_settings) ────────────────────────────────────────
-     const DEFAULTS = {
+   const DEFAULTS = {
         // Вигляд
         videoUrl:              'https://cdn.pixabay.com/video/2020/04/09/35573-407595474_large.mp4',
         snowEnabled:           false,
@@ -37,6 +37,7 @@
         flaskWords:            'колба',
         hookahTestWord:        ''
     };
+
     const STORAGE_KEY = 'RulikMod_settings';
 
     let config = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
@@ -757,6 +758,12 @@
         document.getElementById('rulik-collected-wrap')?.remove();
         document.getElementById('rulik-collected-wrap-real')?.remove();
         _collectedCurrentOrderId = null;
+        // Скидаємо збережений оригінал мітки доставки щоб не переносився на наступне замовлення
+        const labelEl = document.querySelector('h1.form-shipment-store-table-left-shipment-method');
+        if (labelEl) {
+            delete labelEl.dataset.rulikOriginal;
+            delete labelEl.dataset.rulikSuffix;
+        }
     }
 
     // Перехоплюємо pushState/replaceState (Vue Router змінює URL без reload)
