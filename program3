@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Rulik Mod 3.0
+// @name         Rulik Mod Merged
 // @namespace    http://tampermonkey.net/
 // @version      3.0
 // @description  Слава неграм
@@ -11,7 +11,7 @@
     'use strict';
 
     // ── Єдиний конфіг (RulikMod_settings) ────────────────────────────────────────
-    const DEFAULTS = {
+     const DEFAULTS = {
         // Вигляд
         videoUrl:              'https://cdn.pixabay.com/video/2020/04/09/35573-407595474_large.mp4',
         snowEnabled:           false,
@@ -37,7 +37,6 @@
         flaskWords:            'колба',
         hookahTestWord:        ''
     };
-
     const STORAGE_KEY = 'RulikMod_settings';
 
     let config = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
@@ -363,26 +362,38 @@
             .catch(err => console.warn('[RulikMod] Стоп-слова:', err));
     }
 
-    // Видаляє дужки якщо вміст — тільки кирилиця і пробіли (переклад назви)
-    // Залишає: (50 гр), (30000 Затяжок), (Limited), (10) — залишок в кінці
-    const RX_CYRILLIC_BRACKETS = /\(\s*[а-яґєіїА-ЯҐЄІЇ''\s]+\s*\)/gu;
-
+    // Видаляє кириличні дужки (переклади назв), зберігає характеристики (колір, матеріал, об'єм).
+    // Правило: кирилична дужка видаляється якщо після неї є текст АБО числова дужка з текстом
+    // (наприклад (40000 Затяжок)). Залишається якщо вона остання або після неї тільки залишок (число).
     function removeCyrillicBrackets(text) {
-        // Зберігаємо залишок в кінці: (число) або (число/число)
-        const remainderMatch = text.match(/\(\s*\d+[\d/]*\s*\)\s*$/);
-        const remainder = remainderMatch ? remainderMatch[0] : '';
+        const tokens = [];
+        let last = 0;
+        const rx = /\(([^)]*)\)/g;
+        let m;
+        while ((m = rx.exec(text)) !== null) {
+            if (m.index > last) tokens.push({ type: 'text', val: text.slice(last, m.index) });
+            const inner = m[1].trim();
+            tokens.push({
+                type: 'bracket', val: m[0], inner,
+                isCyrillic:  /^[а-яґєіїА-ЯҐЄІЇ''. ]+$/u.test(inner),
+                isRemainder: /^\d+$/.test(inner),   // тільки число — залишок товару
+                hasDigit:    /\d/.test(inner)
+            });
+            last = m.index + m[0].length;
+        }
+        if (last < text.length) tokens.push({ type: 'text', val: text.slice(last) });
 
-        // Тимчасово прибираємо залишок щоб не зачепити його
-        const withoutRemainder = remainder
-            ? text.slice(0, text.lastIndexOf(remainder))
-            : text;
-
-        const cleaned = withoutRemainder
-            .replace(RX_CYRILLIC_BRACKETS, '')
-            .replace(/\s{2,}/g, ' ')
-            .trim();
-
-        return remainder ? `${cleaned} ${remainder.trim()}` : cleaned;
+        let result = '';
+        for (let i = 0; i < tokens.length; i++) {
+            const t = tokens[i];
+            if (t.type === 'text') { result += t.val; continue; }
+            if (!t.isCyrillic)    { result += t.val; continue; }
+            const rest = tokens.slice(i + 1);
+            const hasTextAfter           = rest.some(r => r.type === 'text' && r.val.trim().length > 0);
+            const hasNonRemainderNumBracket = rest.some(r => r.type === 'bracket' && r.hasDigit && !r.isRemainder);
+            result += (hasTextAfter || hasNonRemainderNumBracket) ? '' : t.val;
+        }
+        return result.replace(/\s{2,}/g, ' ').trim();
     }
 
     function cleanTitles() {
@@ -1153,7 +1164,7 @@
         });
         append(loadSwBtn, loadSwStatus);
         append(makeLabel('Стоп-слова (через кому):'));
-        const stopWordsInput = makeInput('textarea', get('stopWords'), '');
+        const stopWordsInput = makeInput('textarea', get('stopWords'), 'одноразка, elf bar, hqd');
         stopWordsInput.rows = 3;
         append(stopWordsInput, makeHint('Видаляються цілі слова незалежно від регістру'));
 
@@ -1176,7 +1187,7 @@
         const flaskWordsInput = makeInput('text', get('flaskWords') || 'колба', 'колба, колби');
         append(flaskWordsInput);
         append(makeLabel('Тестове слово (порожньо = вимкнено):'));
-        const hookahTestInput = makeInput('text', get('hookahTestWord'), '');
+        const hookahTestInput = makeInput('text', get('hookahTestWord'), 'вугілля');
         append(hookahTestInput);
 
         // ── Секція: JSONBin ──
