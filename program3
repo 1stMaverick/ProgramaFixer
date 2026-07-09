@@ -1513,7 +1513,7 @@
             { value: 'hearts',   text: '❤️ Серця' },
             { value: 'confetti', text: '🎊 Конфеті' },
             { value: 'fire',     text: '🔥 Вогонь' },
-            { value: 'splat',    text: '💦 Бризки' },
+            { value: 'splat',    text: '💦 Сперма нах' },
         ], get('activeEffect'));
         effectSelect.addEventListener('change', () => {
             set('activeEffect', effectSelect.value);
